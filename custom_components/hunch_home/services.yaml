@@ -1,0 +1,14 @@
+show_record:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: hunch_home
+clear_record:
+  fields:
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: hunch_home
