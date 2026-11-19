@@ -57,7 +57,8 @@ server repository explains how.
 From Home Assistant 2026.11 the community store is built in, as the Marketplace.
 
 One click: [open Hunch Home in your Marketplace](https://my.home-assistant.io/redirect/marketplace_repository/?owner=yungbose&repository=hunch-home&category=integration).
-Download **Hunch Home**, then restart Home Assistant.
+The first time you use the Marketplace, it shows its own warning about community plug-ins and asks you to
+connect a GitHub account. Then download **Hunch Home** and restart Home Assistant.
 
 Or by hand: copy `custom_components/hunch_home/` from this repository into the `custom_components/` folder of
 your Home Assistant configuration folder, then restart.
