@@ -384,7 +384,7 @@ instead. A light whose level Home Assistant does not report hands the sentence b
 words or ranges. Explicit Celsius or Fahrenheit is converted to the home's unit. Temperatures must be positive
 and at most 35 Celsius or 95 Fahrenheit after conversion; higher values hand back. Colour names are a short list
 in `custom_components/hunch_home/hunch_logic/values.py`; two colours hand back. Add reads the words after "add"
-or "put" up to "to my", "to the", "on my", "on the" or "onto"; remove uses "from" or "off". A list must be
+or "put" up to "to", "to my", "to the", "on my", "on the" or "onto"; remove uses "from" or "off". A list must be
 named as well as an item. Media search reads the words after "play" up to "on" or "in"; vague requests such as
 "play some music" hand back. These are limited English parsers, not another language model.
 
