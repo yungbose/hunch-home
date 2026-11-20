@@ -16,8 +16,11 @@ The rules, kept simple on purpose:
 2. A name overlapping a longer name gives way to the longer one ("desk lamp" over "lamp"); equal lengths stay.
 3. Two different names found in different places means two things: the sentence is handed back.
 4. An area named in the sentence (outside the device's own name) narrows a name to that room; with no device
-   named, it means every device of the domain in that room, where the row allows a room.
+   named, it means every device of the domain in that room, where the row allows a room (for a row with
+   room classes, only the devices of those classes).
 5. With neither, a row that allows a room uses the room of the device that heard the command.
+   With Locks and doors on, a room's name is never a name for something that opens the home: "unlock the
+   garage", with a lock called "Garage" in the room Garage, is handed back (see `room_hides`).
 6. When nothing matches, or more than one thing matches equally, the sentence is handed back.
 
 A row may also reach a device of another domain by name only, when the name the sentence uses holds one of the
@@ -29,6 +32,7 @@ kind. A room never reaches such a device.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from .client import HandBack
@@ -136,12 +140,16 @@ def _overlaps(hit: _Hit, others: list[_Hit]) -> bool:
 def find_target(sentence: str, home: Home, domains: tuple[str, ...], mode: str,
                 device_area_id: str | None = None, device_classes: tuple[str, ...] = (),
                 named_only: tuple[str, ...] = (), also_named: tuple[str, ...] = (),
-                name_words: tuple[str, ...] = ()) -> Target | HandBack:
+                name_words: tuple[str, ...] = (), room_classes: tuple[str, ...] = (),
+                room_hides: Callable[[Thing], bool] | None = None) -> Target | HandBack:
     """The device or room a command acts on, or why the sentence is handed back.
 
-    Devices of a domain in `named_only` are found only by name, never as part of a room. Devices of a domain
-    in `also_named` are found only by a name holding one of `name_words`; their other names count as outside
-    the answer's kind, and a room never reaches them."""
+    Devices of a domain in `named_only` are found only by name, never as part of a room. With `room_classes`,
+    a room reaches only devices of those classes, while a name reaches any class. Devices of a domain in
+    `also_named` are found only by a name holding one of `name_words`; their other names count as outside the
+    answer's kind, and a room never reaches them. When a device `room_hides` picks out is matched on or inside
+    a room's name in the sentence ("Garage" in "the garage" or "the garage hall"), the sentence is handed back
+    as ambiguous; a longer name holding the room's ("the garage door") still names the device."""
     text = words_of(sentence)
     things = [thing for thing in home.things if thing.domain in domains
               and (not device_classes or thing.device_class in device_classes)]
@@ -149,6 +157,12 @@ def find_target(sentence: str, home: Home, domains: tuple[str, ...], mode: str,
     thing_hits = _hits(text, [(thing, thing.names) for thing in things]
                        + [(thing, tuple(name for name in thing.names if says_one_of(name, name_words)))
                           for thing in extra])
+    room_hits = _hits(text, [(area, area.names) for area in home.areas])
+    if room_hides is not None and any(room_hides(hit.owner) and any(
+            room.start <= hit.start and hit.end <= room.end for room in room_hits) for hit in thing_hits):
+        # The room or the device may be meant, and acting on either (or on a twin of the same name, which Home
+        # Assistant could resolve to the device) is a guess: Home Assistant's own agent answers instead.
+        return HandBack("ambiguous", "a lock, door or opener shares a room's name")
     other_hits = _hits(text, [(thing, thing.names) for thing in home.things if thing not in things + extra]
                        + [(thing, tuple(name for name in thing.names if not says_one_of(name, name_words)))
                           for thing in extra])
@@ -164,8 +178,7 @@ def find_target(sentence: str, home: Home, domains: tuple[str, ...], mode: str,
         names = ", ".join(sorted({hit.name for hit in thing_hits}))
         return HandBack("ambiguous", f"more than one device is named: {names}")
 
-    area_hits = [hit for hit in _hits(text, [(area, area.names) for area in home.areas])
-                 if not _overlaps(hit, thing_hits)]
+    area_hits = [hit for hit in room_hits if not _overlaps(hit, thing_hits)]
     named_areas = {hit.owner.area_id for hit in area_hits if isinstance(hit.owner, Area)}
     if len(named_areas) > 1:
         return HandBack("ambiguous", "more than one room is named")
@@ -202,8 +215,11 @@ def find_target(sentence: str, home: Home, domains: tuple[str, ...], mode: str,
         area_id, how = device_area_id, "device's room"
     if area_id is None:
         return HandBack("no room", "no device or room is named, and the device that heard it has no room")
-    in_room = [thing for thing in things if thing.area_id == area_id and thing.domain not in named_only]
+    in_room = [thing for thing in things if thing.area_id == area_id and thing.domain not in named_only
+               and (not room_classes or thing.device_class in room_classes)]
     if not in_room:
-        return HandBack("no match", f"no {' or '.join(domains)} in {home.area_name(area_id)!r}")
+        what = (", ".join(room_classes[:-1]) + f" or {room_classes[-1]}" if room_classes
+                else " or ".join(domains))
+        return HandBack("no match", f"no {what} in {home.area_name(area_id)!r}")
     return Target(tuple(thing.entity_id for thing in in_room), tuple(sorted({t.domain for t in in_room})),
                   area_id=area_id, how=how)

@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 
 from . import values
 from .client import NOT_FOR_ME, Answer, HandBack
-from .match import Home, find_target, words_of
+from .match import Home, Thing, find_target, words_of
 from .table import (
     ACTIONS,
     ACTIONS_1_1,
@@ -46,6 +46,7 @@ from .table import (
     VOLUME,
     VOLUME_DOWN,
     VOLUME_UP,
+    WINDOW_COVERINGS,
     Row,
     choose,
     rows_for,
@@ -153,6 +154,18 @@ GENERIC_DOMAINS = frozenset({"switch", "input_boolean", "script", "scene", "butt
 ENTRY_REASON = "entry devices are left to Home Assistant's own sentences"
 
 
+def _opens_the_home(thing: Thing, action: str, words: list[str]) -> bool:
+    """With Locks and doors on, what a room's name in the sentence can never name (0.1.1): a lock being
+    unlocked; a door, gate, garage door or other cover that is not a window covering, or a switch, being opened
+    or closed; and a switch, scene or the like that the setting-off entry check would refuse."""
+    if thing.domain == "lock":
+        return action == "unlock"
+    if action in {"open", "close"} and thing.domain in {"cover", "switch"}:
+        return thing.domain == "switch" or thing.device_class not in WINDOW_COVERINGS
+    return thing.domain in GENERIC_DOMAINS and bool(
+        ENTRY_WORDS & (set(words) | _tokens(" ".join((thing.entity_id, *thing.names)))))
+
+
 def _disagrees(action: str, words: list[str]) -> bool:
     present = set(words)
     return any(word in present and not cancelled_by & present
@@ -209,8 +222,9 @@ def decide(sentence: str, answer: Answer | HandBack, home: Home, device_area_id:
     """A plan for the sentence, or why it goes back to Home Assistant's own agent.
 
     `locks_and_doors` is the experimental setting, on by default: it adds the unlock, open and close rows of
-    `LOCKS_AND_DOORS`. Switched off, unlock and entry covers hand back, and switches, scenes and other devices
-    are refused for their entry words."""
+    `LOCKS_AND_DOORS` (a named lock, a named cover or switch, or the window coverings in a room). Switched off,
+    unlock and entry covers hand back, and switches, scenes and other devices are refused for their entry
+    words."""
     if isinstance(answer, HandBack):
         return answer
     if answer.declined:
@@ -268,8 +282,10 @@ def decide(sentence: str, answer: Answer | HandBack, home: Home, device_area_id:
     if row.target != NO_TARGET and generic and ENTRY_WORDS.intersection(words):
         return HandBack(ENTRY_REASON)
     if row.target != NO_TARGET:
+        room_hides = ((lambda thing: _opens_the_home(thing, answer.action, words)) if locks_and_doors
+                      else None)
         target = find_target(sentence, home, row.domains, row.target, device_area_id, row.device_classes,
-                             row.named_only, row.also_named, row.name_words)
+                             row.named_only, row.also_named, row.name_words, row.room_classes, room_hides)
         if isinstance(target, HandBack):
             return target
         found = [thing for thing in home.things if thing.entity_id in target.entity_ids]
@@ -300,6 +316,9 @@ def decide(sentence: str, answer: Answer | HandBack, home: Home, device_area_id:
                 slots["name"] = entity_ids[0]
             if row.device_classes and "device_class" in KNOWN_INTENTS[row.intent]:
                 slots["device_class"] = list(row.device_classes)
+            elif row.room_classes and target.how != "named" and "device_class" in KNOWN_INTENTS[row.intent]:
+                # A room command (Locks and doors on) reaches window coverings only; Home Assistant checks too.
+                slots["device_class"] = list(row.room_classes)
         if row.intent_by_domain and target.domains:
             by_domain = dict(row.intent_by_domain)
             intents = {by_domain.get(domain, row.intent) for domain in target.domains}

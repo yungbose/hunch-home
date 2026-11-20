@@ -16,7 +16,7 @@
           "secret": "Only if your Hunch server asks for one, as it does when other machines on your network can reach it. Leave it empty for a server running as a Home Assistant app.",
           "timeout": "If the server takes longer than this, the sentence goes to Home Assistant's own agent.",
           "ha_first": "When on, a sentence Home Assistant understands exactly is carried out by Home Assistant, and Hunch is asked only about the rest.",
-          "locks_and_doors": "Lets Hunch lock and unlock locks and open and close doors, gates, garage doors and motorised windows. These commands are still being improved: in version 1.1's test, both answers were right for 57.7% of 52 real commands about locks, doors and alarms. Switch it off to leave them to Home Assistant's own sentences."
+          "locks_and_doors": "Lets Hunch unlock a lock, and open and close a door, gate, garage door or motorised window, when the sentence names it. A command that names no device opens and closes only blinds, curtains and other window coverings. These commands are still being improved: in version 1.1's test, both answers were right for 57.7% of 52 real commands about locks, doors and alarms. Switch it off to leave them to Home Assistant's own sentences."
         }
       },
       "reconfigure": {
@@ -25,16 +25,18 @@
         "data": {
           "url": "Hunch server address",
           "secret": "Shared secret (optional)",
+          "remove_secret": "Remove the saved secret",
           "timeout": "Timeout",
           "ha_first": "Let Home Assistant's own sentences answer first",
           "locks_and_doors": "Locks and doors (experimental)"
         },
         "data_description": {
           "url": "The full HTTP or HTTPS address of the Hunch server, including its port.",
-          "secret": "Only if your Hunch server asks for one, as it does when other machines on your network can reach it. Clear it to send none.",
+          "secret": "The saved secret is never shown here. Leave this empty to keep it, or type a new one to replace it.",
+          "remove_secret": "Tick this to stop sending a secret, and leave the field above empty.",
           "timeout": "If the server takes longer than this, the sentence goes to Home Assistant's own agent.",
           "ha_first": "When on, a sentence Home Assistant understands exactly is carried out by Home Assistant, and Hunch is asked only about the rest.",
-          "locks_and_doors": "Lets Hunch lock and unlock locks and open and close doors, gates, garage doors and motorised windows. These commands are still being improved: in version 1.1's test, both answers were right for 57.7% of 52 real commands about locks, doors and alarms. Switch it off to leave them to Home Assistant's own sentences."
+          "locks_and_doors": "Lets Hunch unlock a lock, and open and close a door, gate, garage door or motorised window, when the sentence names it. A command that names no device opens and closes only blinds, curtains and other window coverings. These commands are still being improved: in version 1.1's test, both answers were right for 57.7% of 52 real commands about locks, doors and alarms. Switch it off to leave them to Home Assistant's own sentences."
         }
       },
       "reauth_missing": {
@@ -58,7 +60,10 @@
       "invalid_preference": "Choose whether Home Assistant answers first.",
       "invalid_switch": "Choose whether Locks and doors is on or off.",
       "invalid_secret": "Use letters, digits and symbols only, with no spaces, up to 512 characters.",
-      "secret_required": "Enter the secret."
+      "secret_required": "Enter the secret.",
+      "secret_or_remove": "Type a new secret or tick Remove the saved secret, not both.",
+      "invalid_remove": "Choose whether to remove the saved secret.",
+      "secret_for_new_address": "The server address has changed. Type the new server's secret, or tick Remove the saved secret."
     },
     "abort": {
       "already_configured": "This Hunch server is already set up.",

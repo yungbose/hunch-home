@@ -1,6 +1,7 @@
 """Validate settings and options without importing Home Assistant."""
 
 import math
+from collections.abc import Mapping
 
 from .client import clean_secret, clean_url
 
@@ -44,6 +45,38 @@ def settings(user_input: dict, minimum: float = 0.2, maximum: float = 30.0) -> t
             data["secret"] = secret
     if errors:
         return {}, errors
+    return data, {}
+
+
+REMOVE_SECRET = "remove_secret"
+
+
+def reconfigured(user_input: dict, saved: Mapping, minimum: float = 0.2, maximum: float = 30.0
+                 ) -> tuple[dict, dict]:
+    """The settings from the Reconfigure form, which never shows the saved secret; `saved` is the entry's data.
+
+    An empty secret field keeps the saved secret; a new secret replaces it (checked as at set-up); ticking
+    "remove_secret" removes it. Ticking the box and typing a secret is an error asking for one or the other.
+    When the address changes and a secret is saved, an empty field is an error asking for the new server's
+    secret or the box, so the old secret is never sent to another host unasked. The box is never stored."""
+    saved_secret = saved.get("secret")
+    remove = user_input.get(REMOVE_SECRET, False)
+    errors = {}
+    if not isinstance(remove, bool):
+        errors[REMOVE_SECRET] = "invalid_remove"
+    elif remove and clean_secret(user_input.get("secret")) != "":
+        errors[REMOVE_SECRET] = "secret_or_remove"
+    data, setting_errors = settings({key: value for key, value in user_input.items() if key != REMOVE_SECRET},
+                                    minimum, maximum)
+    if errors.get(REMOVE_SECRET) == "secret_or_remove":
+        setting_errors.pop("secret", None)  # the one question is which of the two was meant
+    errors |= setting_errors
+    if errors:
+        return {}, errors
+    if not remove and "secret" not in data and saved_secret:
+        if data["url"] != clean_url(saved.get("url")):
+            return {}, {"secret": "secret_for_new_address"}
+        data["secret"] = saved_secret
     return data, {}
 
 

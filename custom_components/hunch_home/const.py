@@ -3,7 +3,7 @@
 DOMAIN = "hunch_home"
 NAME = "Hunch Home"
 # The plug-in's own version, as in manifest.json (a test keeps the two equal); counted in the daily summary.
-PLUGIN_VERSION = "0.1.0"
+PLUGIN_VERSION = "0.1.1"
 
 CONF_URL = "url"
 CONF_TIMEOUT = "timeout"
@@ -12,6 +12,8 @@ CONF_LOCKS_AND_DOORS = "locks_and_doors"
 # The Hunch server's shared secret, sent as `Authorization: Bearer <secret>` when set. Stored in the config
 # entry, never logged and never put in diagnostics.
 CONF_SECRET = "secret"
+# Reconfigure only: a box that removes the saved secret (the form never shows the secret itself).
+CONF_REMOVE_SECRET = "remove_secret"
 # Options (Configure): the local record, and the choice to share daily counts.
 CONF_RECORD = "record"
 CONF_SHARE_COUNTS = "share_counts"

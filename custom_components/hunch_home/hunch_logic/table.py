@@ -81,6 +81,7 @@ class Row:
     device_classes: tuple[str, ...] = ()  # only these classes may match; also sent to intents that accept them
     by_entity: bool = False               # one intent call per device found, by entity ID, never by room
     named_only: tuple[str, ...] = ()      # domains a room command never reaches: the device must be named
+    room_classes: tuple[str, ...] = ()    # the only classes a room command reaches; a name reaches any class
     also_named: tuple[str, ...] = ()      # other domains reached only by a name holding one of `name_words`
     name_words: tuple[str, ...] = ()
 
@@ -169,19 +170,26 @@ TABLE: dict[tuple[str, str], tuple[Row, ...]] = {
     ("announce", ANY_KIND): (Row("HassBroadcast", needs=MESSAGE, since="1.1"),),
 }
 
-# Locks and doors (experimental): a setting, on by default. With it on, these rows replace the ones above:
-# unlock is `HassTurnOff` on a lock, and open and close are `HassTurnOn`
-# and `HassTurnOff` on any cover the home exposes, whatever its device class (doors, gates, garage doors,
-# motorised windows and blinds alike), or on a switch named in the sentence (an entry wired as a switch, by its
-# own on and off; a room command never turns on every switch in the room). Hunch 1.1 answers doors, gates and
-# garage doors as open or close / Security and blinds as open or close / Climate; both reach the same devices.
-# Each device found gets its own call, so a room command never reaches more than the plug-in found.
+# Locks and doors (experimental): a setting, on by default. With it on, these rows replace the ones above.
+# Nothing that opens the home moves unless the sentence names it (0.1.1). Unlock is `HassTurnOff` on a lock
+# the sentence names, sent by entity ID; no lock named, or only a room, hands back. A room's name is never a
+# name for anything that opens the home (`decide._opens_the_home`, `match.find_target`). Open and close are
+# `HassTurnOn` and `HassTurnOff` on a cover the sentence names, whatever its device class (doors, gates, garage
+# doors, motorised windows and blinds alike), or on a switch it names (an entry wired as a switch, by its own on
+# and off). A command that names no device reaches only the window coverings in the room, as with the setting
+# off. Hunch
+# 1.1 answers doors, gates and garage doors as open or close / Security and blinds as open or close / Climate;
+# both reach the same devices. Each device found gets its own call, so a room command never reaches more than
+# the plug-in found, and a room command also sends the window-covering classes for Home Assistant to check.
 _OPEN = Row("HassTurnOn", ("cover", "switch"), NAMED_OR_ROOM, domain_slot=True, by_entity=True,
-            named_only=("switch",), note="any cover, or a named switch")
+            named_only=("switch",), room_classes=WINDOW_COVERINGS,
+            note="a named cover or switch; window coverings in a room")
 _CLOSE = Row("HassTurnOff", ("cover", "switch"), NAMED_OR_ROOM, domain_slot=True, by_entity=True,
-             named_only=("switch",), note="any cover, or a named switch")
+             named_only=("switch",), room_classes=WINDOW_COVERINGS,
+             note="a named cover or switch; window coverings in a room")
 LOCKS_AND_DOORS: dict[tuple[str, str], tuple[Row, ...]] = {
-    ("unlock", "Security"): (Row("HassTurnOff", ("lock",), NAMED_OR_ROOM, domain_slot=True),),
+    ("unlock", "Security"): (Row("HassTurnOff", ("lock",), NAMED, domain_slot=True, by_entity=True,
+                                 note="a named lock only, by entity ID"),),
     ("open", "Climate"): (_OPEN,),
     ("close", "Climate"): (_CLOSE,),
     ("open", "Security"): (_OPEN,),

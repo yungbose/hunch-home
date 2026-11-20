@@ -6,10 +6,11 @@ to do and what kind of thing it is about. The plug-in then finds the device amon
 Assist and carries the command out with Home Assistant's own built-in intents. Anything Hunch declines, or that
 the plug-in cannot place safely, goes to Home Assistant's own agent, as if Hunch were not there. English only.
 
-> **Locks and doors are on by default.** With **Locks and doors (experimental)** on, Hunch locks and unlocks
-> locks and opens and closes doors, gates and garage doors, so a wrong answer moves a real lock or door, and a
-> command that names none can reach every one in the room. To leave those to Home Assistant, switch it off when
-> you set the plug-in up or later under **Reconfigure**. See [Locks and doors](#locks-and-doors).
+> **Locks and doors are on by default.** With **Locks and doors (experimental)** on, Hunch unlocks locks and
+> opens and closes doors, gates and garage doors that the sentence names, so a wrong answer can move a real
+> lock or door the sentence names. A command that names none unlocks nothing, and in a room opens and closes
+> only blinds, curtains and other window coverings. To leave locks and doors to Home Assistant, switch the
+> setting off when you set the plug-in up or later under **Reconfigure**. See [Locks and doors](#locks-and-doors).
 
 ## What you need
 
@@ -79,9 +80,14 @@ your Home Assistant configuration folder, then restart.
 3. **Settings > Voice assistants**: open an English assistant and choose **Hunch Home** as its conversation agent.
 4. Under **Expose**, expose only the entities you want it to control. Give entities and areas useful names or
    aliases: the plug-in finds a device by its whole name or an alias. A scene must be a named entity.
-5. Type "turn on the kitchen lights" in Assist.
+5. Type in Assist a sentence Home Assistant's own sentences do not know, naming one of your own devices, such
+   as "could you pop the kitchen light on". While **Let Home Assistant's own sentences answer first** is on, a
+   plain "turn on the kitchen lights" is answered by Home Assistant itself. To see who answered, run
+   **Developer tools > Actions > Hunch Home: Show the record**: "carried out" means Hunch did it, "answered by
+   Home Assistant first" means Home Assistant's own sentences did, and "handed back" means Hunch passed it to
+   Home Assistant, with the reason.
 
-You can change all five fields later with the integration's **Reconfigure**. The record and sharing are under
+You can change these settings later with the integration's **Reconfigure**. The record and sharing are under
 **Configure** (see [Your data](#your-data)).
 
 ## What it understands
@@ -107,11 +113,16 @@ Answers from the released model, each asked once on 19 November 2026 (examples, 
 | unlock all the doors | unlock / Security |
 | i used to lock the door every night | not for me (right: it is not a command) |
 
+The table shows Hunch's two answers; the plug-in then has to find the device. A typed sentence has no room, so
+"make it brighter in here" works from a voice device that sits in a room and is handed back when typed. When
+typing, name the device or the room.
+
 What the plug-in can then do, by kind:
 
 - **Lights:** on, off, a brightness, a colour, brighter and dimmer.
 - **Climate:** thermostats on and off, a temperature; blinds, curtains and shutters open and closed.
-- **Security:** locks; with Locks and doors on, also doors, gates and garage doors.
+- **Security:** locking locks; with Locks and doors on, also unlocking a named lock and opening and closing a
+  named door, gate or garage door.
 - **Speakers & TVs:** on, off, play something named, pause, resume, mute, volume, next, previous.
 - **Timers and alarms:** start, cancel, check and change a simple timer, on an Assist satellite that has timers.
 - **Scenes:** activate a named scene.
@@ -164,7 +175,7 @@ Answers from the same session on 19 November 2026:
 
 | You say | Hunch answers | What happens |
 |---|---|---|
-| open my front door | unlock / Security | With Locks and doors on, it unlocks a lock named front door. With no lock of that name, it unlocks every exposed lock in the room of the device that heard it. |
+| open my front door | unlock / Security | With Locks and doors on, it unlocks a lock named front door. With no lock of that name, it goes to Home Assistant. |
 | close the garage door fifteen percent | set level / Climate | Wrong kind. The plug-in has no row for that pair and hands it back. |
 | enable the lock | not for me | Handed back to Home Assistant. |
 | control gate half | not for me | Handed back to Home Assistant. |
@@ -188,27 +199,40 @@ Other limits:
 
 **Locks and doors (experimental)** is one setting in the set-up and **Reconfigure** forms, on by default.
 
-With it on, the plug-in locks and unlocks locks, opens and closes any cover you expose (doors, gates, garage
-doors, skylights and motorised windows as well as blinds), and turns a gate or door wired as a switch on and
-off when the sentence names that switch (never as part of a room).
+With it on, the plug-in moves nothing that opens the home unless the sentence names it:
 
-A command that names no device the plug-in can find applies to a whole room: the room the sentence names, or
-else the room of the device that heard it. So:
+- **Unlock** acts only on a lock the sentence names, by its whole name or an alias. A bare "unlock", "unlock
+  all the doors", or a sentence that names only a room goes to Home Assistant. "Open my front door" answered
+  unlock unlocks a lock named "front door", and goes to Home Assistant in a home with no lock of that name.
+- **Open and close** act on any cover the sentence names (a door, gate, garage door, skylight, motorised window
+  or blind), and on a gate or door wired as a switch when the sentence names that switch.
+- **A command that names no device** applies to a room: the room the sentence names, or else the room of the
+  device that heard it. There it opens and closes only blinds, curtains, shades, shutters and awnings, never a
+  door, gate, garage door, skylight, motorised window or a cover with no type. "Open the blinds", in a garage
+  holding a blind and a garage door, opens only the blind.
+- **A room's name is never a device's name** here. With a lock or door called "Garage" in the room Garage,
+  "unlock the garage", "open the garage" or "close the blinds in the garage" goes to Home Assistant, since the
+  plug-in cannot tell whether the room or the device was meant. A longer name still counts: "open the garage
+  door" opens "Garage Door". Do not give a lock or door the same name as its room.
+- **Openers wired as switches, and scenes:** a switch, scene or input boolean the sentence names is also turned
+  on or off whatever its name ("turn on the gate opener"); with the setting off those go to Home Assistant.
+- **Lock** can still lock every exposed lock in a room, as with the setting off.
 
-- "Unlock" with no lock's name in the sentence unlocks every exposed lock in that room. "Open my front door"
-  answered unlock, in a home with no lock named "front door", does the same.
-- "Open the blinds", in a room with no cover named "blinds", opens every exposed cover in that room. If the
-  garage door is a cover in the same room, it opens too.
+"Goes to Home Assistant" does not mean nothing happens. Home Assistant's own agent then answers the sentence as
+it would without Hunch, and it acts on a sentence its own sentences understand: "unlock the kitchen", said in
+so many words, is still carried out by Home Assistant when a lock is called "Kitchen". With **Let Home
+Assistant's own sentences answer first** on, Home Assistant answers such sentences before Hunch is asked. What
+the plug-in prevents is Hunch's own guess moving a lock or door the sentence did not name.
 
-Each cover or switch found gets its own call by entity ID, so Home Assistant moves no cover the plug-in did not
-find; an unlock for a room is one call that Home Assistant applies to the exposed locks in it. The only other
-check is the one every command has: the sentence's own words must not contradict the answer ("lock the front
-door" answered unlock goes to Home Assistant). It does not catch everything: "open my front door" answered
-unlock passes it.
+Unlock, open and close send each lock, cover or switch found as its own call by entity ID, so Home Assistant
+moves nothing the plug-in did not find. A switch, scene or input boolean reached by any other command (turn on,
+turn off, brighter or dimmer) is sent by its name, as other devices are, and Home Assistant matches it again.
+The other check is the one every command has: the sentence's own words must not contradict the answer
+("lock the front door" answered unlock goes to Home Assistant). Neither catches a wrong answer about a device
+the sentence names: "open my front door" answered unlock, in a home with a lock named "front door", unlocks it.
 
 Security commands were 57.7% right in the test above. Before you rely on it: expose only the locks and doors
-you want spoken commands to reach, keep them in rooms of their own in Home Assistant where you can, and try it
-on your own doors.
+you want spoken commands to reach, and try it on your own doors.
 
 With it off, the plug-in leaves unlocking, doors, gates, garage doors, motorised windows and entry switches to
 Home Assistant's own sentences. It still locks locks and moves blinds, curtains and other window coverings. The
@@ -296,8 +320,11 @@ Docker command above need none.
 request carries `Authorization: Bearer <secret>`; when it is empty, no `Authorization` header is sent. The secret
 is stored in the config entry, as Home Assistant stores every integration's credentials, and is never written
 to the log, to a hand-back's reason or to the diagnostics file (which says only whether one is set). It may hold
-letters, digits and symbols, with no spaces, up to 512 characters; the server asks for at least 16. Clearing the
-field in **Reconfigure** removes it.
+letters, digits and symbols, with no spaces, up to 512 characters; the server asks for at least 16.
+**Reconfigure** never shows the saved secret: leave the field empty to keep it, type a new one to replace it, or
+tick **Remove the saved secret** to remove it (one or the other, not both). When you change the server address,
+an empty field is not enough: type the new server's secret or tick the box, so the old secret is never sent to
+another machine without you saying so.
 
 If the server turns a request away (HTTP 401), the sentence goes to Home Assistant's own agent like any other
 server fault, and Hunch Home asks for attention under **Settings > Devices & services**. The form says **The
@@ -348,8 +375,8 @@ Assistant. Names and slots were checked against the
 | set colour | Lights | `HassLightSet`, needs a value: `color` |
 | turn on / turn off | Climate | `HassTurnOn` / `HassTurnOff`, `domain: [climate]` |
 | set temperature | Climate | `HassClimateSetTemperature`, needs a value: `temperature` |
-| lock / unlock | Security | `HassTurnOn` / `HassTurnOff`, `domain: [lock]` |
-| open / close | Climate or Security | `HassTurnOn` / `HassTurnOff`, one call per entity, any cover (`domain: [cover]`) or a named switch (`domain: [switch]`) |
+| lock / unlock | Security | `HassTurnOn` / `HassTurnOff`, `domain: [lock]`; lock takes a named lock or a room, unlock (Locks and doors on) a named lock only, one call by entity ID |
+| open / close | Climate or Security | `HassTurnOn` / `HassTurnOff`, one call per entity: with Locks and doors on, a named cover of any class (`domain: [cover]`) or a named switch (`domain: [switch]`), and with no device named, the room's window coverings only (with `device_class`); for off, see below |
 | turn on / turn off | Scenes | `HassTurnOn` for a named scene; turn off hands back |
 | turn on / turn off | Speakers & TVs | `HassTurnOn` / `HassTurnOff`, `domain: [media_player]` |
 | turn on, with unmute / resume / play | Speakers & TVs | `HassMediaPlayerUnmute` / `HassMediaUnpause` / `HassMediaSearchAndPlay`; play needs a value: `search_query` |
@@ -367,8 +394,8 @@ Assistant. Names and slots were checked against the
 exposed entities of the row's domains. Whole names or aliases count, ignoring case and punctuation. A longer
 name at the same position wins, so Desk Lamp wins over Lamp. Different devices named separately, or equal
 matches that the named room or the originating device's room cannot settle, hand back. A named room without a
-device selects the domain in that room where the table permits it. No room means the originating device's area,
-never the whole home. Home Assistant does its own matching, exposure and feature checks again when it handles
+device selects the domain in that room where the table permits it: never for unlock, and for open and close only
+the window coverings. No room means the originating device's area, never the whole home. Home Assistant does its own matching, exposure and feature checks again when it handles
 the intent.
 
 **Lamps on smart plugs.** A lamp on a smart plug is a switch to Home Assistant. A Lights command reaches it only
@@ -404,15 +431,21 @@ their device class is `blind`, `curtain`, `shade`, `shutter` or `awning`. Doors,
 covers with no known class hand back. So does a cover of class `window`: in Home Assistant that is a motorised
 window or skylight, an opening into the home rather than something that covers one. A room-wide cover request
 selects only these window coverings and sends each entity ID separately, with the same allowed `device_class`
-list for Home Assistant to check again. It never sends a command to the room's whole cover domain.
+list for Home Assistant to check again. It never sends a command to the room's whole cover domain. A room-wide
+cover request does the same with Locks and doors on. What the setting adds: a named lock to unlock (by entity
+ID), a named cover or switch of any kind to open and close, and the entry-word refusals below lifted, so a
+switch, scene or input boolean the sentence names acts whatever its name. With it on, when a lock (for unlock),
+a cover that is not a window covering or a switch (for open and close), or a switch, scene or input boolean whose
+name, entity ID or sentence holds an entry word is matched only on or inside a room's name in the sentence, the
+sentence goes to Home Assistant.
 
 Gate, door and garage openers are often wired as switches, buttons or scripts, where any "turn on" moves them.
-The plug-in refuses them by name only: an Other device command, or a turn on or turn off that reaches a switch,
+With Locks and doors off, the plug-in refuses them by name only: an Other device command, or a turn on or turn off that reaches a switch,
 scene, script, button or input boolean, hands back when the sentence, the device's name or alias, or its entity
 ID holds door, gate, garage, opener, latch, lock, bolt, entry, entrance, shutter, buzzer or intercom (with
 plurals). A gate called "Front Barrier" would not be caught. Any turn on or turn off whose sentence says open,
 close, shut, lock or unlock also hands back, since those rows never open, close or lock anything; "shut off" and
-"shut down" answered turn off still act. A scene that opens a door, a gate or a garage ("Leaving", "Arrive
+"shut down" answered turn off still act. That last check applies with the setting on too. A scene that opens a door, a gate or a garage ("Leaving", "Arrive
 home") is left to Home Assistant when its name or entity ID holds an entry word (for example
 `scene.garage_arrive`).
 
