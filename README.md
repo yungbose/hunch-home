@@ -52,10 +52,16 @@ hears goes anywhere. Off unless you switch it on.
 ## Install
 
 1. [Add this repository to your Home Assistant](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fyungbose%2Fhunch-home) (or by hand: **Settings > Apps > Install app**, the three-dot menu, **Repositories**, **Add**, and paste `https://github.com/yungbose/hunch-home`).
+
+   <img src="images/install-add-repository.png" width="440" alt="Home Assistant asks Add app repository? for https://github.com/yungbose/hunch-home, with Cancel and Add">
+
 2. Install **Hunch Home** and start it. (Its **Log** tab says `model 1.1 loaded` when it is ready.)
+
+   <img src="images/install-in-the-store.png" width="400" alt="Hunch Home's page in the app store: version 0.2.0 and the Install button">
+
 3. Open **Settings > Devices & services**. Under **Discovered** you will see **Hunch Home**: press **Add**, then **Submit**.
 
-   <img src="images/install-discovered.png" width="300" alt="Hunch Home under Discovered in Devices and services, with its Add button">
+   <img src="images/install-discovered.png" width="300" alt="Hunch Home under Discovered in Devices and services, with its Add button"> <img src="images/install-submit.png" width="420" alt="The Wyoming Protocol dialogue that follows Add: connect to the Wyoming service provided by the app Hunch Home, with Submit">
 
 4. Open the app's page (**Open web UI** on the app's **Info** tab) and press **Add Hunch to my assistant**.
 
