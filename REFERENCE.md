@@ -1,3 +1,5 @@
+![A dithered mascot juggling a lamp, a kettle, a clock, a bulb and a radio beside a drawing of a house, with the title Hunch Home](images/banner.png)
+
 # Hunch Home reference
 
 What to look up after the [read-me](README.md). Docker has its own page, [DOCKER.md](DOCKER.md).
@@ -79,7 +81,9 @@ live.
 
 Installing from this repository was tried on 21 Nov 2026 in a Home Assistant OS test machine (64-bit Arm): Home
 Assistant pulled the published image in under two minutes, the app was ready 16 seconds after Start, and set-up
-and a first command worked. The published image run in Docker beside Home Assistant Container has not been tried.
+and a first command worked. The published image was run the same day in Docker on a Raspberry Pi 5
+beside Home Assistant Container, as [DOCKER.md](DOCKER.md) says: it was ready in under ten seconds and typed
+commands switched a real lamp.
 
 Not tried yet: a PC (amd64) at home, Home Assistant OS on a Raspberry Pi, a Home Assistant Green, real locks,
 covers and speakers, voice through a voice device, a person speaking to listening live, and timers. Nor has a

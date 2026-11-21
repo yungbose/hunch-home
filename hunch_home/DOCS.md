@@ -1,3 +1,5 @@
+<img src="https://raw.githubusercontent.com/yungbose/hunch-home/main/images/banner.png" alt="A dithered mascot juggling a lamp, a kettle, a clock, a bulb and a radio beside a drawing of a house, with the title Hunch Home">
+
 # Hunch Home
 
 Hunch carries out home commands, such as "turn on the reading light", and the same command in your own words,

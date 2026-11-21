@@ -1,9 +1,13 @@
+![A dithered mascot juggling a lamp, a kettle, a clock, a bulb and a radio beside a drawing of a house, with the title Hunch Home](images/banner.png)
+
 # Hunch Home
 
 A small local model for Home Assistant that understands home commands in your own words. No LLM, no GPU, no
 cloud.
 
 Say "turn the lights on" and the lights come on, in tens of milliseconds, on a Raspberry Pi.
+
+<img src="images/live-view.png" width="1024" alt="The app's page after &quot;could you pop the reading light on&quot;: Turned on Reading light, Hunch did it in 44 ms">
 
 **Why**
 
@@ -50,7 +54,12 @@ hears goes anywhere. Off unless you switch it on.
 1. [Add this repository to your Home Assistant](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fyungbose%2Fhunch-home) (or by hand: **Settings > Apps > Install app**, the three-dot menu, **Repositories**, **Add**, and paste `https://github.com/yungbose/hunch-home`).
 2. Install **Hunch Home** and start it. (Its **Log** tab says `model 1.1 loaded` when it is ready.)
 3. Open **Settings > Devices & services**. Under **Discovered** you will see **Hunch Home**: press **Add**, then **Submit**.
+
+   <img src="images/install-discovered.png" width="300" alt="Hunch Home under Discovered in Devices and services, with its Add button">
+
 4. Open the app's page (**Open web UI** on the app's **Info** tab) and press **Add Hunch to my assistant**.
+
+   <img src="images/install-add-button.png" width="680" alt="The app's page before set-up: what Hunch found in the home, and the Add Hunch to my assistant button">
 
 The page then shows what Hunch found in your home, and anything worth fixing. The button makes Hunch your
 assistant's agent and remembers the one it had.
@@ -60,6 +69,8 @@ assistant's agent and remembers the one it had.
 Under **Try a sentence** on the app's page are two examples made from your own light and room: a plain one, and
 one in people's own words. Press each to see what Hunch would do (nothing moves). Then say or type one to your
 assistant, and look at **What happened** on the page.
+
+<img src="images/try-a-sentence.png" width="420" alt="Try a sentence with two examples from the home's own names; the first pressed: Hunch would turn on Bedside lamp">
 
 Said to a voice device in a room, or heard by listening, "turn the lights on" acts in that room. Typed, a command
 must name a device or a room, since Hunch cannot know which room you are in. A plain command such as "turn on the reading light" may be answered by Home Assistant itself first

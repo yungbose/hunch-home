@@ -1,3 +1,5 @@
+![A dithered mascot juggling a lamp, a kettle, a clock, a bulb and a radio beside a drawing of a house, with the title Hunch Home](images/banner.png)
+
 # Hunch Home in Docker
 
 On Home Assistant Container, run the same image beside Home Assistant on the same machine, with an access token.
@@ -9,7 +11,8 @@ buildx plug-in: the build reads the model from a second build context, which Doc
    **Create token**. Put it in a file named `.env` beside the compose file, readable by you only:
    `HASS_TOKEN=paste-the-token-here`.
 2. Add the `hunch` service from the example to your compose file (image `ghcr.io/yungbose/hunch-home:0.2.0`) and
-   run `docker compose up -d`.
+   run `docker compose up -d`. If Home Assistant already runs another way, use the example by itself, with its
+   own `homeassistant` service deleted.
 3. In Home Assistant: **Settings > Devices & services > Add integration**, **Wyoming Protocol**, host
    `127.0.0.1`, port `10500`.
 4. Open the page at http://127.0.0.1:8099/ on that machine and press **Add Hunch to my assistant**.
