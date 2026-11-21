@@ -1,493 +1,196 @@
-# Hunch Home for Home Assistant
+# Hunch Home
 
-Hunch Home is a conversation agent for Home Assistant that understands home commands in your own words. Each
-sentence you type or say to Assist goes to Hunch, a small model running on your own machine, which answers what
-to do and what kind of thing it is about. The plug-in then finds the device among the entities you exposed to
-Assist and carries the command out with Home Assistant's own built-in intents. Anything Hunch declines, or that
-the plug-in cannot place safely, goes to Home Assistant's own agent, as if Hunch were not there. English only.
+A small local model for Home Assistant that understands home commands in your own words. No LLM, no GPU, no
+cloud.
 
-> **Locks and doors are on by default.** With **Locks and doors (experimental)** on, Hunch unlocks locks and
-> opens and closes doors, gates and garage doors that the sentence names, so a wrong answer can move a real
-> lock or door the sentence names. A command that names none unlocks nothing, and in a room opens and closes
-> only blinds, curtains and other window coverings. To leave locks and doors to Home Assistant, switch the
-> setting off when you set the plug-in up or later under **Reconfigure**. See [Locks and doors](#locks-and-doors).
+Say "turn the lights on" and the lights come on, in tens of milliseconds, on a Raspberry Pi.
+
+**Why**
+
+- Home Assistant's own commands need the right phrasing.
+- A local LLM needs a GPU and takes seconds to answer.
+- A cloud LLM takes time too, and sends your data somewhere else.
+
+Hunch does one job: work out what a home command means. It is small enough for the machine you already run Home
+Assistant on.
+
+**What it does**
+
+- Works across the home, not only lights: heating, blinds, locks, speakers and TVs, timers, scenes, to-do lists,
+  plugs, fans and the vacuum ([the full list](#what-it-can-do)).
+- Understands commands however you say them: "turn on the reading light", "could you pop the reading light on",
+  "kill the reading light".
+- Runs on your machine in about 550 MB of memory. No account, no key. Nothing leaves your home.
+- Sits in front of the assistant you already have. Home commands are Hunch's. Questions and everything else go to
+  your own agent, including a language model if you use one.
+- Learns your wording. It won't get everything right, and you can teach it with your own examples.
+- Unlocks or opens only a lock or door you name, and one switch keeps it away from them
+  ([Locks and doors](#locks-and-doors)).
+
+**What it doesn't do (yet)**
+
+- Answer questions or chat. Your other agent does that.
+- Just works in English for now.
+- Scheduling ("in ten minutes"), or two commands in one sentence.
+
+**Experimental:** listening with no wake word, using a USB microphone. It all runs on your machine, so nothing it
+hears goes anywhere. Off unless you switch it on.
 
 ## What you need
 
-- Home Assistant 2026.11.0 or later, with an English assistant.
-- A 64-bit machine: a Raspberry Pi 4 or 5 with a 64-bit system, or a PC (arm64 or amd64).
-- About 550 MB of free memory for the Hunch server. Fine on 4 GB; tight on 2 GB with other things running.
-- Home Assistant OS (or Supervised) for the server as an app, or Docker for the server beside Home Assistant
-  Container.
-
-No account, no token, no cloud. The model is inside the server and nothing is downloaded after the install.
+- Home Assistant 2026.11 or later, with an English assistant (English only).
+- Home Assistant OS (or Supervised). On Home Assistant Container, run the image
+  `ghcr.io/yungbose/hunch-home:0.2.0` as [DOCKER.md](DOCKER.md) says.
+- A 64-bit machine: a Raspberry Pi 4 or 5 with a 64-bit system, or a PC.
+- About 550 MB of free memory, and about 1.5 GB in all if you switch on listening with no wake word.
+- A download of about 700 MB. The first start takes a few minutes on a Raspberry Pi.
 
 ## Install
 
-There are two pieces. The model cannot run inside Home Assistant itself (Home Assistant's system has no build of
-the library the model needs), so it runs in a small separate server on the same machine. This plug-in sends that
-server each sentence and acts on the answer.
+1. [Add this repository to your Home Assistant](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fyungbose%2Fhunch-home) (or by hand: **Settings > Apps > App store**, the three-dot menu, **Repositories**, and paste `https://github.com/yungbose/hunch-home`).
+2. Install **Hunch Home** and start it. (Its **Log** tab says `model 1.1 loaded` when it is ready.)
+3. Open **Settings > Devices & services**. Under **Discovered** you will see **Hunch Home**: press **Add**, then **Submit**.
+4. Open the app's page (**Open web UI** on the app's **Info** tab) and press **Add Hunch to my assistant**.
 
-### 1. The Hunch Home server
+The page then shows what Hunch found in your home, and anything worth fixing. The button makes Hunch your
+assistant's agent and remembers the one it had.
 
-**On Home Assistant OS**, the server is a Home Assistant app (what used to be called an add-on).
+## Try it
 
-One click: [add the app repository to your Home Assistant](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fyungbose%2Fhunch-home-server).
+Under **Try a sentence** on the app's page are two examples made from your own light and room: a plain one, and
+one in people's own words. Press each to see what Hunch would do (nothing moves). Then say or type one to your
+assistant, and look at **What happened** on the page.
 
-Or by hand: **Settings > Apps > App store**, the three-dot menu, **Repositories**, and paste
-`https://github.com/yungbose/hunch-home-server`. Install **Hunch Home server** and start it. It is ready when its
-**Log** tab says `Hunch-1.1 Home typed build ready`. Your server address is `http://ea895109-hunch:8770`,
-with no secret.
+Said to a voice device in a room, or heard by listening, "turn the lights on" acts in that room. Typed, a command
+must name a device or a room, since Hunch cannot know which room you are in. A plain command such as "turn on the reading light" may be answered by Home Assistant itself first
+and then will not appear on Hunch's page, which is expected.
 
-**On Home Assistant Container**, run the server image beside it. The
-[server repository](https://github.com/yungbose/hunch-home-server) has a compose example; with plain Docker:
+The rule: a home command is Hunch's, which does it or says in one short line why not; everything else goes to
+your other agent.
 
-```sh
-docker run -d --name hunch --restart unless-stopped \
-  -p 127.0.0.1:8770:8770 -e HUNCH_NO_SECRET=1 \
-  --read-only --cap-drop ALL --security-opt no-new-privileges:true \
-  ghcr.io/yungbose/hunch-home-server:1.1.0
-```
-
-Your server address is `http://127.0.0.1:8770`, with no secret. This assumes Home Assistant runs on the host's
-network, as its own installation guide sets it up. To run the server on another machine, it needs a secret; the
-server repository explains how.
-
-### 2. This plug-in
-
-From Home Assistant 2026.11 the community store is built in, as the Marketplace.
-
-One click: [open Hunch Home in your Marketplace](https://my.home-assistant.io/redirect/marketplace_repository/?owner=yungbose&repository=hunch-home&category=integration).
-The first time you use the Marketplace, it shows its own warning about community plug-ins and asks you to
-connect a GitHub account. Then download **Hunch Home** and restart Home Assistant.
-
-Or by hand: copy `custom_components/hunch_home/` from this repository into the `custom_components/` folder of
-your Home Assistant configuration folder, then restart.
-
-## Setting it up
-
-1. **Settings > Devices & services > Add integration**, and choose **Hunch Home**.
-2. Fill in the form:
-
-   | Field | What to enter |
-   |---|---|
-   | **Hunch server address** | `http://ea895109-hunch:8770` for the app, `http://127.0.0.1:8770` for Docker on the same machine. |
-   | **Shared secret (optional)** | Leave it empty unless your server asks for one. See [The shared secret](#the-shared-secret). |
-   | **Timeout** | Two seconds unless you have a reason to change it (0.2 to 30). A slower reply sends the sentence to Home Assistant's own agent. |
-   | **Let Home Assistant's own sentences answer first** | On to start with. A sentence Home Assistant understands exactly (its built-in sentences and your sentence triggers) is carried out by Home Assistant, and Hunch is asked only about the rest. Switch it off to try Hunch first. |
-   | **Locks and doors (experimental)** | On by default. See [Locks and doors](#locks-and-doors). |
-
-3. **Settings > Voice assistants**: open an English assistant and choose **Hunch Home** as its conversation agent.
-4. Under **Expose**, expose only the entities you want it to control. Give entities and areas useful names or
-   aliases: the plug-in finds a device by its whole name or an alias. A scene must be a named entity.
-5. Type in Assist a sentence Home Assistant's own sentences do not know, naming one of your own devices, such
-   as "could you pop the kitchen light on". While **Let Home Assistant's own sentences answer first** is on, a
-   plain "turn on the kitchen lights" is answered by Home Assistant itself. To see who answered, run
-   **Developer tools > Actions > Hunch Home: Show the record**: "carried out" means Hunch did it, "answered by
-   Home Assistant first" means Home Assistant's own sentences did, and "handed back" means Hunch passed it to
-   Home Assistant, with the reason.
-
-You can change these settings later with the integration's **Reconfigure**. The record and sharing are under
-**Configure** (see [Your data](#your-data)).
-
-## What it understands
-
-For each sentence Hunch gives an action and a kind of thing, or "not for me". The kinds are Lights; Climate
-(heating, cooling, blinds); Security (locks, doors, gates, garage doors, cameras, alarms); Speakers & TVs;
-Timers and alarms; Scenes; Weather; Lists; Water; and Other device.
-
-Answers from the released model, each asked once on 19 November 2026 (examples, not a measurement):
-
-| You say | Hunch answers |
+| The page says | What it means |
 |---|---|
-| turn on the kitchen lights | turn on / Lights |
-| make it brighter in here | raise / Lights |
-| set the heating to 21 | set temperature / Climate |
-| turn the tv off | turn off / Speakers & TVs |
-| play some jazz in the living room | turn on / Speakers & TVs |
-| set a timer for ten minutes | turn on / Timers and alarms |
-| add milk to my shopping list | add / Lists |
-| what is the weather like | ask / Weather |
-| open the garage door | open / Security |
-| lock the side door | lock / Security |
-| unlock all the doors | unlock / Security |
-| i used to lock the door every night | not for me (right: it is not a command) |
+| Hunch did it | Hunch carried it out. The page leads with what was done, such as "Turned on Reading light". |
+| Hunch did nothing | A home command it could not carry out. The page leads with a short reason, such as "Couldn't work out which device you meant". |
+| Passed to Home Assistant (or your other agent) | Not a home command: your other agent answered. |
+| Could not reach ... | Your other agent did not answer. |
+| Ignored | Listening heard something that was not a command, and kept nothing. |
 
-The table shows Hunch's two answers; the plug-in then has to find the device. A typed sentence has no room, so
-"make it brighter in here" works from a voice device that sits in a room and is handed back when typed. When
-typing, name the device or the room.
+## What it can do
 
-What the plug-in can then do, by kind:
+| Kind | What the app does |
+|---|---|
+| Lights | On, off, a brightness, a colour, brighter and dimmer. |
+| Climate | Thermostats on and off, a temperature; blinds, curtains and shutters open and closed. |
+| Security | Locking locks; with Locks and doors on, unlocking, opening and closing a named lock, door, gate or garage door. |
+| Speakers & TVs | On, off, play something named, pause, resume, mute, volume, next, previous. |
+| Timers and alarms | Start, cancel, check and change a simple timer, on a voice device that has timers. |
+| Scenes | Activate a named scene. |
+| Weather | The current weather. |
+| Lists | Add an item to, or remove one from, a named to-do list. |
+| Other device | A named switch, fan or input boolean on and off; a vacuum started and sent home. |
+| Water | Nothing yet; it is passed on. |
 
-- **Lights:** on, off, a brightness, a colour, brighter and dimmer.
-- **Climate:** thermostats on and off, a temperature; blinds, curtains and shutters open and closed.
-- **Security:** locking locks; with Locks and doors on, also unlocking a named lock and opening and closing a
-  named door, gate or garage door.
-- **Speakers & TVs:** on, off, play something named, pause, resume, mute, volume, next, previous.
-- **Timers and alarms:** start, cancel, check and change a simple timer, on an Assist satellite that has timers.
-- **Scenes:** activate a named scene.
-- **Weather:** the current weather.
-- **Lists:** add an item to, or remove one from, a named to-do list.
-- **Other device:** a named switch, fan or input boolean on and off; a vacuum started and sent home.
-- **Water:** nothing yet; it goes to Home Assistant.
+Limits:
 
-The exact rules are in [Reference: what runs](#reference-what-runs).
+- One command per sentence. Two in one sentence are passed on.
+- Nothing at a later time: "unlock the door in ten minutes" is not done. Timers are the exception.
+- A number or time it cannot be sure of ("1,000 percent") is not acted on.
+- A device is found by its name or another name it has in Home Assistant, whole: "the lamp" does not reach
+  "Lamp B" until it has "Lamp" as another name (**Settings > Voice assistants > Expose**, **Add alias**). A lamp
+  on a smart plug: in the plug's settings choose **Show as: Light** and give it a room, and "turn on the
+  kitchen lights" reaches it.
+- Thin spots: "turn on the cooling" switches the thermostat on in its last mode, not necessarily cooling, and a
+  kettle or stopping a vacuum is often not understood. Teaching it (below) fixes that for your home.
 
 ## How accurate it is
 
-From version 1.1's published test: 474 real typed home commands in people's own words, gathered from public
-posts and videos and held out for testing. "Right" means both answers right, the action and the kind.
+On 474 real typed home commands in people's own words, held out from teaching, the model inside the app
+(Hunch-1.1 Home) got both the action and the kind right for 70.9%, up from 38.0% for the previous version. Try it
+on lamps before locks.
 
 | Result | Share of the 474 |
 |---|---|
 | Right | 70.9% |
 | Wrong | 12.2% |
-| Declined (handed back to Home Assistant) | 16.9% |
+| Declined (passed on to your other agent) | 16.9% |
 
-The previous version got 38.0% right.
+The right answers were set by two language models that agreed, not checked by a person. By kind, and the rest:
+[the model's page](https://huggingface.co/xevall/hunch-1-home).
 
-By kind, on the same set:
+## Teaching it your words
 
-| Kind | Right | Test sentences |
-|---|---|---|
-| Lights | 89.5% | 76 |
-| Climate | 85.7% | 98 |
-| Speakers & TVs | 64.9% | 94 |
-| Security | 57.7% | 52 |
-| Other device | 53.1% | 81 |
-
-Timers and alarms, Scenes, Water, Weather and Lists have fewer than 30 test sentences each and are unmeasured.
-
-Sentences that mention a device but are not commands ("I used to lock the door"): Hunch wrongly answers about
-12 in 100 of them as a command.
-
-What these figures do not say:
-
-- They measure Hunch's two answers, not the whole plug-in. Whether the plug-in then finds the right device is
-  not measured.
-- The right answers in the test were set by two language models that agreed. No person checked them.
-- They are typed sentences. A spoken command goes through Home Assistant's speech-to-text first, which the test
-  does not include.
-
-## What it gets wrong
-
-Answers from the same session on 19 November 2026:
-
-| You say | Hunch answers | What happens |
-|---|---|---|
-| open my front door | unlock / Security | With Locks and doors on, it unlocks a lock named front door. With no lock of that name, it goes to Home Assistant. |
-| close the garage door fifteen percent | set level / Climate | Wrong kind. The plug-in has no row for that pair and hands it back. |
-| enable the lock | not for me | Handed back to Home Assistant. |
-| control gate half | not for me | Handed back to Home Assistant. |
-
-Other limits:
-
-- In the test, about 1 in 8 commands got a wrong answer. The plug-in's checks catch some of those (see
-  [When it hands back](#when-it-hands-back-to-home-assistant)); the rest act on the wrong thing or in the wrong
-  way.
-- One command per sentence. Two commands ("turn off the tv and turn on the lights"), a "not" or "don't", or a
-  condition ("if", "unless") go to Home Assistant.
-- It cannot delay anything. "Unlock the door in ten minutes" or "tonight" goes to Home Assistant; timers are
-  the exception.
-- Levels and temperatures must be digits. "Raise the lights to 80%" works; "raise them by 10%" goes to Home
-  Assistant. Timer lengths also accept words from one to ninety-nine ("ten minutes").
-- Vague media requests ("play some music"), weather forecasts, alarms, named timers, relative heating changes
-  and Water commands go to Home Assistant.
-- Scripts, buttons and automations are never run. A scene you name is activated as it stands, whatever it does.
+When Hunch gets a sentence wrong, press **That was wrong** under it on the page, choose what it should have
+understood, and press **Teach Hunch**. From then on it answers that sentence, and others worded like it, your way.
+What you taught stays on this machine and can be removed under **What you have taught**. Teaching never changes
+the rules: a taught sentence still cannot unlock a lock it does not name.
 
 ## Locks and doors
 
-**Locks and doors (experimental)** is one setting in the set-up and **Reconfigure** forms, on by default.
+With **Locks and doors** on (the default), Hunch unlocks, opens or closes only a lock, door, gate or garage door
+the sentence names; with none named, only the room's window coverings move. Do not give a lock or door the same
+name as its room. A wrong answer can still move the one you named (security commands were 57.7% right), so expose
+only the locks and doors you want spoken to, and try your own first.
 
-With it on, the plug-in moves nothing that opens the home unless the sentence names it:
+Home Assistant's own sentences answer many everyday wordings before Hunch is asked, including "unlock the front
+door", so the Locks and doors switch does not govern those. To keep a lock or door from voice altogether, stop
+exposing it to Assist.
 
-- **Unlock** acts only on a lock the sentence names, by its whole name or an alias. A bare "unlock", "unlock
-  all the doors", or a sentence that names only a room goes to Home Assistant. "Open my front door" answered
-  unlock unlocks a lock named "front door", and goes to Home Assistant in a home with no lock of that name.
-- **Open and close** act on any cover the sentence names (a door, gate, garage door, skylight, motorised window
-  or blind), and on a gate or door wired as a switch when the sentence names that switch.
-- **A command that names no device** applies to a room: the room the sentence names, or else the room of the
-  device that heard it. There it opens and closes only blinds, curtains, shades, shutters and awnings, never a
-  door, gate, garage door, skylight, motorised window or a cover with no type. "Open the blinds", in a garage
-  holding a blind and a garage door, opens only the blind.
-- **A room's name is never a device's name** here. With a lock or door called "Garage" in the room Garage,
-  "unlock the garage", "open the garage" or "close the blinds in the garage" goes to Home Assistant, since the
-  plug-in cannot tell whether the room or the device was meant. A longer name still counts: "open the garage
-  door" opens "Garage Door". Do not give a lock or door the same name as its room.
-- **Openers wired as switches, and scenes:** a switch, scene or input boolean the sentence names is also turned
-  on or off whatever its name ("turn on the gate opener"); with the setting off those go to Home Assistant.
-- **Lock** can still lock every exposed lock in a room, as with the setting off.
+With the switch off, Hunch unlocks no lock and opens or closes no door, gate or garage door, and says so; it still
+locks locks and moves window coverings.
 
-"Goes to Home Assistant" does not mean nothing happens. Home Assistant's own agent then answers the sentence as
-it would without Hunch, and it acts on a sentence its own sentences understand: "unlock the kitchen", said in
-so many words, is still carried out by Home Assistant when a lock is called "Kitchen". With **Let Home
-Assistant's own sentences answer first** on, Home Assistant answers such sentences before Hunch is asked. What
-the plug-in prevents is Hunch's own guess moving a lock or door the sentence did not name.
+## Listening with no wake word (experimental)
 
-Unlock, open and close send each lock, cover or switch found as its own call by entity ID, so Home Assistant
-moves nothing the plug-in did not find. A switch, scene or input boolean reached by any other command (turn on,
-turn off, brighter or dimmer) is sent by its name, as other devices are, and Home Assistant matches it again.
-The other check is the one every command has: the sentence's own words must not contradict the answer
-("lock the front door" answered unlock goes to Home Assistant). Neither catches a wrong answer about a device
-the sentence names: "open my front door" answered unlock, in a home with a lock named "front door", unlocks it.
-
-Security commands were 57.7% right in the test above. Before you rely on it: expose only the locks and doors
-you want spoken commands to reach, and try it on your own doors.
-
-With it off, the plug-in leaves unlocking, doors, gates, garage doors, motorised windows and entry switches to
-Home Assistant's own sentences. It still locks locks and moves blinds, curtains and other window coverings. The
-detail is under [Reference: what runs](#reference-what-runs). With it off, do not expose gate, door or garage
-switches to Assist: the plug-in can refuse them only by name.
+Off unless you switch it on. With a USB microphone on your Home Assistant machine, Hunch acts on the commands
+it hears. It never unlocks a lock, never opens or closes anything but window coverings, passes nothing on, and keeps nothing it ignored. It asks before fetching its speech model (about
+482 MB). How often it acts by mistake in a real room is not measured. In one informal test with voices played
+from a speaker, it carried out about half the spoken commands, each on the right lamp, and one sentence of
+ordinary talk about a lamp switched the lamp. [How to switch it on](REFERENCE.md#switching-on-listening).
 
 ## Your data
 
-Nothing leaves your computer unless you choose to share it to make Hunch better.
+Nothing leaves your machine by Hunch's own doing, unless you switch on the daily counts.
 
-Each sentence goes to the Hunch server, which is on the same machine unless you put it on another. The server
-never logs or stores a sentence or an answer, and makes no connection of its own. The plug-in keeps a record in
-your own Home Assistant, and offers one separate choice to share daily counts, off unless you turn it on.
+- **The record** of each sentence stays on this machine: the latest 1,000, none older than 30 days. Switch it
+  off, or clear it, under **Settings** on the page.
+- **Passed-on sentences** go to the agent you chose; a cloud language model gets them under its own terms.
+- **Your voice.** Hunch gets words, not sound, from Assist. Listening turns sound into words on this machine.
+- **The daily counts** (off unless you switch them on) send counts to xevall once a day, never a sentence or a
+  device or room name. Switching them off deletes what this home sent.
+- **Fetching.** Only the speech model, once, if you switch on listening.
 
-### The record
+The privacy notice, [PRIVACY.md](PRIVACY.md), says what is sent, who keeps it, for how long, and how to have it
+deleted.
 
-Hunch keeps a record of each sentence it handles and what it did, here in your Home Assistant, so you can see
-what went wrong. The record is on by default; switch it off or clear it under the integration's **Configure**.
+## Removing it
 
-Each entry holds: when; the sentence; Hunch's action, kind and score, and the model's version when the server
-gives one; what the plug-in did (the intents it fired and the entity IDs, or why it handed the sentence back,
-with the detail of that reason); whether Home Assistant reported an error; and whether it was undone. A
-sentence that Home Assistant's own sentences answered first is kept too, with no answer from Hunch.
+Before you uninstall Hunch Home, press **Stop using Hunch** on the app's page for each assistant that uses it.
+The app cannot tidy up after itself once it is removed.
 
-**Undone** means that within 30 seconds of a command being carried out, something other than that command put a
-device it changed back the other way: a person at the switch, someone in the app, an automation, or another
-voice command. It is the cheapest honest sign that the plug-in did the wrong thing. On and off, lock and unlock,
-open and close, pause and resume, and a brighter or dimmer step have an other way; a colour, a temperature, a
-volume, a scene, a timer and the like do not, and are recorded as "not known" rather than guessed. The
-plug-in's own calls in the same turn never count, nor does an automation the command itself set off directly.
-An automation set off at one remove does count, as unavoidable noise. A device that flicks back and forth while
-reporting counts only if it stays the other way for 3 seconds. If Hunch is asked about the same device again
-within the window, that later command decides: "no, off" straight after a wrong "on" marks the first one
-undone. The full rule is in `custom_components/hunch_home/hunch_logic/undo.py`.
+1. On the app's page, under **Assistants**, press **Stop using Hunch** for each assistant that uses Hunch.
+2. If you shared daily counts, switch **Share daily counts** off and leave the app running for a minute, so it can
+   ask for this home's counts to be deleted.
+3. Uninstall the app. Home Assistant removes Hunch's agent by itself, and deletes the app's own folder with
+   everything in it: the record, what you taught it, its settings, its install number and the speech model. A
+   reinstall starts afresh.
 
-The record keeps the latest 1,000 sentences, none older than 30 days, oldest dropped first: about 400 KB in a
-private file under `.storage`, written by Home Assistant's own storage helper, at most once every ten seconds.
-It survives restarts, and your Home Assistant backups hold it too, wherever you keep them. A device being
-watched when Home Assistant stops is recorded as "not known". Deleting the integration's entry deletes the
-record.
+If you uninstalled it first, your assistant still points at Hunch, which is no longer there, and Assist answers
+every sentence with an error ("Oops, an error has occurred"), even Home Assistant's own commands. To fix it:
+**Settings > Voice assistants**, choose the assistant and set its **Conversation agent** back to the one you had
+before (such as Home Assistant). Hunch also switched on **Prefer handling commands locally**; switch it off again
+if it was off before.
 
-- **See it and export it:** **Developer tools > Actions**, choose **Hunch Home: Show the record**, and run it.
-  The whole record, sentences included, is shown as YAML, ready to copy. The action is for administrators only.
-- **Clear it:** **Configure > Clear the record**, or the action **Hunch Home: Clear the record**. It cannot be
-  undone.
-- **Switch it off:** **Configure > The record and sharing**, then **Keep a record**. Nothing new is kept; what is
-  already kept stays until you clear it.
-- **Diagnostics:** the integration's **Download diagnostics** file is made to be pasted into bug reports, so it
-  leaves out the sentences, the hand-backs' details (which may name a device or a room), the entity IDs (cut to
-  their domain, such as `light`), the server address and the secret. It shows the newest 50 entries that way.
-
-Debug logging for the plug-in can include sentences, Hunch's answers, entity names and values. Think about what
-will be written to Home Assistant's log before you turn it on.
-
-### Sharing counts (your choice, off unless you turn it on)
-
-**Share daily counts to make Hunch better** is a separate choice under **Configure > The record and sharing**.
-It is off unless you turn it on, and Hunch Home works the same without it. The privacy notice is
-[PRIVACY.md](PRIVACY.md).
-
-Once a day it sends counts only, for the day before: how many sentences of each action and kind, what the
-plug-in did with them (carried out, handed back and why, error), how many were undone, a rough spread of
-scores, the plug-in's and the model's version numbers, and an install number made at random for this alone.
-Never a sentence, a device or entity name, an entity ID, a room, or anything you typed. Every string in the
-counts is a fixed word or a number; the plug-in checks that again before sending, and the receiving end checks
-it a third time against the same word lists. The diagnostics file shows, under `sharing`, exactly what would be
-sent for yesterday, whether sharing is on or off. The install number itself is left out of diagnostics, because
-it is what deletes this home's counts; a short `install_reference` made from it stands in, and is the thing to
-quote when writing to us.
-
-Turning the choice off stops sending at once and deletes what this home sent: the plug-in asks the receiving end
-to delete every day stored for its install number, and if it cannot reach it, tries again every hour until it
-can (diagnostics show `deletion_owed` meanwhile). Nothing more is sent while a deletion is owed, even if sharing
-is turned on again. Deleting the integration's entry while sharing is on asks for the deletion once before the
-record, and with it the install number, is deleted; note your `install_reference` first in case that request
-fails. The counts are kept for 24 months. [PRIVACY.md](PRIVACY.md) says who keeps them, why, and how to ask
-about them: write to privacy@xevall.com, quoting the install reference.
-
-## The shared secret
-
-You need one only when the Hunch server can be reached from other machines on your network. The app and the
-Docker command above need none.
-
-**Shared secret (optional)** is a password field in the set-up and **Reconfigure** forms. When it is set, every
-request carries `Authorization: Bearer <secret>`; when it is empty, no `Authorization` header is sent. The secret
-is stored in the config entry, as Home Assistant stores every integration's credentials, and is never written
-to the log, to a hand-back's reason or to the diagnostics file (which says only whether one is set). It may hold
-letters, digits and symbols, with no spaces, up to 512 characters; the server asks for at least 16.
-**Reconfigure** never shows the saved secret: leave the field empty to keep it, type a new one to replace it, or
-tick **Remove the saved secret** to remove it (one or the other, not both). When you change the server address,
-an empty field is not enough: type the new server's secret or tick the box, so the old secret is never sent to
-another machine without you saying so.
-
-If the server turns a request away (HTTP 401), the sentence goes to Home Assistant's own agent like any other
-server fault, and Hunch Home asks for attention under **Settings > Devices & services**. The form says **The
-Hunch server needs a secret** when none is set, or **The Hunch server refused the secret** when the one set does
-not match. Entering the secret there saves it and restarts the integration. Until then, every sentence goes to
-Home Assistant's own agent.
-
-## When it hands back to Home Assistant
-
-These go to Home Assistant's built-in agent, with the sentence, conversation ID, context, language and
-originating device passed through:
-
-- "not for me", a declined answer, or a reply the plug-in cannot read;
-- an action and kind with no row in the table below, a value it cannot read, a missing name, or more than one
-  equally good match;
-- a server that cannot be reached, answers with an error or takes longer than the **Timeout**;
-- a sentence whose words disagree with the answer (below);
-- a delayed command, more than one command, a negation or a condition;
-- an intent error or a device that fails.
-
-The hand-back always selects Home Assistant's built-in agent, so it cannot reach Hunch again even when Hunch is
-the assistant's agent. A server fault logs one warning line; other hand-backs log at debug level.
-
-The disagreement check is a small English whole-word check. It catches opposite directions such as "unlock"
-answered as lock, "lock" answered as unlock (unless "unlock" is also said), "off", "kill", "stop", "disable" or
-"out" answered as turn on, "start", "enable" or "resume" answered as turn off, "close" answered as open, "open"
-answered as close, "dim", "dimmer" or "darker" answered as raise, and "brighter" or "brighten" answered as
-lower. A turn on with "out" anywhere hands back, so "switch on the light out the back" goes to Home Assistant
-too. Durations, clock times and delay words such as "tomorrow", "tonight", "later", "after", "soon", "in a bit",
-"this evening", "at bedtime" and "when I leave" also hand back, except in the supported timer commands. These
-deliberately limited checks do not prove that every other answer agrees with the sentence.
-
-A device can partly act before failing. Home Assistant's own agent may then repeat that part.
-
-## Reference: what runs
-
-This section is for people who want the exact rules. The complete table is in
-`custom_components/hunch_home/hunch_logic/table.py`. Only pairs listed there run; every other pair goes to Home
-Assistant. Names and slots were checked against the
-[Home Assistant intent list](https://github.com/OHF-Voice/intents/blob/main/intents.yaml) and the
-[2026.11.0 handlers](https://github.com/home-assistant/core/tree/2026.11.0/homeassistant/components).
-
-| Action | Kind | Intent and value slots |
-|---|---|---|
-| turn on / turn off | Lights | `HassTurnOn` / `HassTurnOff`, `domain: [light]`, or a switch named by a name that says lamp or light (`domain: [switch]`) |
-| set level | Lights | `HassLightSet`, needs a value: `brightness` from 0 to 100 |
-| raise / lower | Lights | With a brightness in the sentence, `HassLightSet` as for set level. With none, one call per light: `HassLightSet` 25 points up or down (never below 10%), or `HassTurnOn` / `HassTurnOff` for a light that cannot dim or a named lamp switch |
-| set colour | Lights | `HassLightSet`, needs a value: `color` |
-| turn on / turn off | Climate | `HassTurnOn` / `HassTurnOff`, `domain: [climate]` |
-| set temperature | Climate | `HassClimateSetTemperature`, needs a value: `temperature` |
-| lock / unlock | Security | `HassTurnOn` / `HassTurnOff`, `domain: [lock]`; lock takes a named lock or a room, unlock (Locks and doors on) a named lock only, one call by entity ID |
-| open / close | Climate or Security | `HassTurnOn` / `HassTurnOff`, one call per entity: with Locks and doors on, a named cover of any class (`domain: [cover]`) or a named switch (`domain: [switch]`), and with no device named, the room's window coverings only (with `device_class`); for off, see below |
-| turn on / turn off | Scenes | `HassTurnOn` for a named scene; turn off hands back |
-| turn on / turn off | Speakers & TVs | `HassTurnOn` / `HassTurnOff`, `domain: [media_player]` |
-| turn on, with unmute / resume / play | Speakers & TVs | `HassMediaPlayerUnmute` / `HassMediaUnpause` / `HassMediaSearchAndPlay`; play needs a value: `search_query` |
-| turn off, with mute / pause / stop | Speakers & TVs | `HassMediaPlayerMute` / `HassMediaPause` |
-| set level / raise / lower | Speakers & TVs | `HassSetVolume` (`volume_level`) / `HassSetVolumeRelative` (`volume_step`) |
-| next / previous | Speakers & TVs | `HassMediaNext` / `HassMediaPrevious` |
-| ask | Weather | `HassGetWeather`, current weather only |
-| add / remove | Lists | `HassListAddItem` / `HassListRemoveItem`, needs a value: `item`, and a named to-do list |
-| turn on / turn off / remove | Timers and alarms | `HassStartTimer` (needs a value: `hours`, `minutes`, `seconds`) / `HassCancelTimer` |
-| ask / raise / lower | Timers and alarms | `HassTimerStatus` / `HassIncreaseTimer` / `HassDecreaseTimer`; changes need a duration |
-| turn on / turn off | Other device | `HassTurnOn` / `HassTurnOff` for a named switch, fan or input boolean; a vacuum uses `HassVacuumStart` / `HassVacuumReturnToBase` |
-| announce | Any known kind | `HassBroadcast`, needs a value: `message` |
-
-**Finding the device.** `name` and, where supported, `area` slots select the target. The plug-in searches only
-exposed entities of the row's domains. Whole names or aliases count, ignoring case and punctuation. A longer
-name at the same position wins, so Desk Lamp wins over Lamp. Different devices named separately, or equal
-matches that the named room or the originating device's room cannot settle, hand back. A named room without a
-device selects the domain in that room where the table permits it: never for unlock, and for open and close only
-the window coverings. No room means the originating device's area, never the whole home. Home Assistant does its own matching, exposure and feature checks again when it handles
-the intent.
-
-**Lamps on smart plugs.** A lamp on a smart plug is a switch to Home Assistant. A Lights command reaches it only
-when the sentence names it by a name that says lamp or light ("Reading lamp"); a room command never does, since
-a switch in a room may be a kettle or a fan. A name that begins with "the" is also found without it: "lamp off"
-finds "the lamp".
-
-**Brighter and dimmer.** With no level, each light moves 25 points from its present level: an off light counts
-as 0, dimming stops at 10% and leaves an off light off, and a light that cannot dim is switched on or off
-instead. A light whose level Home Assistant does not report hands the sentence back.
-
-**Values.** Levels and temperatures must be digits, with an optional percentage or temperature unit; no number
-words or ranges. Explicit Celsius or Fahrenheit is converted to the home's unit. Temperatures must be positive
-and at most 35 Celsius or 95 Fahrenheit after conversion; higher values hand back. Colour names are a short list
-in `custom_components/hunch_home/hunch_logic/values.py`; two colours hand back. Add reads the words after "add"
-or "put" up to "to", "to my", "to the", "on my", "on the" or "onto"; remove uses "from" or "off". A list must be
-named as well as an item. Media search reads the words after "play" up to "on" or "in"; vague requests such as
-"play some music" hand back. These are limited English parsers, not another language model.
-
-**Timers and weather.** Timer lengths also accept English number words from one to ninety-nine, plus "an hour"
-and "half an hour". A timer must say "timer", be unnamed and have no room or delayed command. Alarms, named
-timers and selectors such as "the 10 minute timer" hand back. Timer and broadcast intents need an Assist
-satellite that supports them. Weather needs one exposed weather entity or a matching name, and does not answer
-tomorrow's forecast. Water, questions about a device's state, and relative heating changes hand back. Named list
-or weather entities that need a room to tell them apart are passed by entity ID, since their intents take no
-`area` slot.
-
-**Scenes.** A scene you name is activated as it stands, whatever it contains. Scripts, buttons and automations
-are never run by this plug-in.
-
-**With Locks and doors off.** Unlocking is left to Home Assistant's own sentences. Covers are operated only when
-their device class is `blind`, `curtain`, `shade`, `shutter` or `awning`. Doors, gates, garage doors, dampers and
-covers with no known class hand back. So does a cover of class `window`: in Home Assistant that is a motorised
-window or skylight, an opening into the home rather than something that covers one. A room-wide cover request
-selects only these window coverings and sends each entity ID separately, with the same allowed `device_class`
-list for Home Assistant to check again. It never sends a command to the room's whole cover domain. A room-wide
-cover request does the same with Locks and doors on. What the setting adds: a named lock to unlock (by entity
-ID), a named cover or switch of any kind to open and close, and the entry-word refusals below lifted, so a
-switch, scene or input boolean the sentence names acts whatever its name. With it on, when a lock (for unlock),
-a cover that is not a window covering or a switch (for open and close), or a switch, scene or input boolean whose
-name, entity ID or sentence holds an entry word is matched only on or inside a room's name in the sentence, the
-sentence goes to Home Assistant.
-
-Gate, door and garage openers are often wired as switches, buttons or scripts, where any "turn on" moves them.
-With Locks and doors off, the plug-in refuses them by name only: an Other device command, or a turn on or turn off that reaches a switch,
-scene, script, button or input boolean, hands back when the sentence, the device's name or alias, or its entity
-ID holds door, gate, garage, opener, latch, lock, bolt, entry, entrance, shutter, buzzer or intercom (with
-plurals). A gate called "Front Barrier" would not be caught. Any turn on or turn off whose sentence says open,
-close, shut, lock or unlock also hands back, since those rows never open, close or lock anything; "shut off" and
-"shut down" answered turn off still act. That last check applies with the setting on too. A scene that opens a door, a gate or a garage ("Leaving", "Arrive
-home") is left to Home Assistant when its name or entity ID holds an entry word (for example
-`scene.garage_arrive`).
-
-## What has been tried, and what has not
-
-Tried:
-
-- Home Assistant 2026.11.2 in Docker on a Raspberry Pi 5, with a real lamp.
-- Home Assistant OS 18.4 in a virtual machine, with the server as an app: set up through the normal form, four
-  sentences carried out, the shared secret, the record, and sharing switched on and off.
-
-Not tried yet: a PC (amd64) at home, a Home Assistant Green or a Raspberry Pi 4, colour bulbs, rooms of mixed
-lights, real locks, covers, media players, and timers through a satellite. Most of what the reference table lists
-has been checked against Home Assistant's code and with stand-in devices in automated tests, not on real
-devices. Try it on devices that do no harm first, and please report what breaks at
-[github.com/yungbose/hunch-home/issues](https://github.com/yungbose/hunch-home/issues).
-
-## Removing it and rolling back
-
-1. Under **Settings > Voice assistants**, choose Home Assistant again as the assistant's conversation agent.
-2. Delete the Hunch Home entry under **Settings > Devices & services**. This deletes the record. If sharing was
-   on, it asks once for this home's counts to be deleted (see [Sharing counts](#sharing-counts-your-choice-off-unless-you-turn-it-on)).
-3. Remove the plug-in from the Marketplace, or delete `custom_components/hunch_home/`, then restart Home
-   Assistant.
-4. Uninstall the Hunch Home server app, or stop and remove the `hunch` container. Removing the plug-in does not
-   touch the server.
-
-To roll back an update installed by hand, put the previous `custom_components/hunch_home/` folder back and
-restart.
 
 ## Help and bugs
 
-Open an issue at [github.com/yungbose/hunch-home/issues](https://github.com/yungbose/hunch-home/issues). Attach
-the integration's **Download diagnostics** file: it leaves out your sentences, names, the server address and
-the secret. Problems with the server itself go to
-[github.com/yungbose/hunch-home-server/issues](https://github.com/yungbose/hunch-home-server/issues).
+Open an issue at [github.com/yungbose/hunch-home/issues](https://github.com/yungbose/hunch-home/issues). The
+app's **Log** tab is safe to paste: it holds no sentences and no device names.
 
 ## Licence
 
-The plug-in's code is Apache 2.0 ([LICENSE](LICENSE)). The model inside the server is CC BY-NC 4.0: free at
-home, for research and for other non-commercial use. A company that wants to use it commercially needs
-permission from xevall: licensing@xevall.com.
+Code: Apache 2.0 ([LICENSE](LICENSE)). The model inside, Hunch-1.1 Home: CC BY-NC 4.0, free for home, research
+and other non-commercial use, with credit; commercial use needs permission (licensing@xevall.com). [NOTICE](NOTICE) says what is whose; the image carries every licence under `/licenses`.
+Listening uses Parakeet TDT 0.6B v2 by NVIDIA (CC BY 4.0), as sherpa-onnx publishes it, with the sherpa-onnx
+library (Apache 2.0) and the Silero speech detector (MIT); credits under `/licenses/listening/NOTICE`.
 
-Made by [xevall](https://xevall.com). The model's page:
-[huggingface.co/xevall/hunch-1-home](https://huggingface.co/xevall/hunch-1-home).
+Made by [xevall](https://xevall.com). The settings, permissions and what has been tried: [REFERENCE.md](REFERENCE.md).

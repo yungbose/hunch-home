@@ -1,0 +1,11 @@
+# BuildKit reads this file instead of a .dockerignore when it builds the Dockerfile beside it.
+# The build context is this folder; only these paths go into the build. model/ is there only in a local app's
+# folder (Home Assistant's own build), never in the repository.
+*
+!requirements.lock
+!hunch_app/
+!page/
+!model/
+**/__pycache__
+**/*.pyc
+**/.DS_Store

@@ -1,0 +1,27 @@
+Hunch Home: listening with no wake word (experimental, off by default)
+
+The speech model
+----------------
+When the owner first switches listening on and confirms it, Hunch Home fetches one speech model into its data
+folder. It is not in this image.
+
+  Parakeet TDT 0.6B v2, by NVIDIA
+  https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2
+  Licence: Creative Commons Attribution 4.0 International (CC BY 4.0),
+  https://creativecommons.org/licenses/by/4.0/
+
+  Fetched in the 8-bit ONNX form published by the sherpa-onnx project (k2-fsa):
+  https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8.tar.bz2
+  That form is NVIDIA's model converted to ONNX and quantised to 8 bits by sherpa-onnx. The archive is checked
+  against a SHA-256 pinned in hunch_app/listen/speech.py before it is used.
+
+The libraries in this image that listening uses
+-----------------------------------------------
+  sherpa-onnx and sherpa-onnx-core (speech-to-text runtime), by the k2-fsa project. Apache License 2.0.
+  https://github.com/k2-fsa/sherpa-onnx
+
+  pysilero-vad (the speech detector), by Michael Hansen, with the Silero VAD model by the Silero Team.
+  MIT License. https://github.com/rhasspy/pysilero-vad and https://github.com/snakers4/silero-vad
+
+  parec (pulseaudio-utils) and arecord (alsa-utils), Debian's packages; their copyright files are in
+  /usr/share/doc/pulseaudio-utils/ and /usr/share/doc/alsa-utils/.

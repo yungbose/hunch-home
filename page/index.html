@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#050505">
+<title>Hunch Home</title>
+<link rel="icon" href="data:,">
+<link rel="preload" href="fonts/Syne-Regular-Static.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="preload" href="fonts/Alegreya-Regular-Static.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="page.css">
+<script type="module" src="app.js"></script>
+</head>
+<body>
+<!--
+  Hunch Home's page, opened inside Home Assistant. One look, whatever Home Assistant's theme: the dark ground with
+  the blue ribbons. Every address is relative: Home Assistant serves it under a path of its own. Options for
+  development: ?render=full|light|still picks the ribbons' rendering, ?debug=1 shows their frame rate and buffer.
+-->
+<section class="stage" id="stage" data-state="resting" aria-labelledby="now-head">
+  <canvas class="silk" id="silk" aria-hidden="true"></canvas>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="stage-in">
+    <header class="stage-bar">
+      <p class="mark">Hunch Home</p>
+      <p class="link-status" id="link-status" role="status">Connecting</p>
+    </header>
+
+    <div class="now" id="now">
+      <p class="now-label" id="now-label"></p>
+      <h1 class="now-head" id="now-head">Hunch Home</h1>
+      <p class="now-sentence" id="now-sentence"></p>
+      <p class="now-detail" id="now-detail"></p>
+    </div>
+
+    <div class="setup" id="setup" hidden>
+      <div class="setup-choose" id="setup-choose" hidden>
+        <label for="setup-pipeline">Assistant</label>
+        <select id="setup-pipeline"></select>
+      </div>
+      <p class="setup-says" id="setup-says"></p>
+      <label class="setup-sidebar" id="setup-sidebar-wrap" hidden>
+        <input type="checkbox" id="setup-sidebar" checked>
+        <span>Show Hunch Home in Home Assistant's sidebar</span>
+      </label>
+      <div class="setup-act">
+        <button type="button" class="button button-paper" id="setup-go">Add Hunch to my assistant</button>
+        <p class="note-inline" id="setup-note" role="status"></p>
+      </div>
+      <p class="setup-fix" id="setup-fix-wrap" hidden><a href="#home" id="setup-fix"></a></p>
+    </div>
+  </div>
+  <p class="debug" id="debug" hidden></p>
+</section>
+
+<div class="page" id="page" hidden>
+  <main class="content">
+    <ul class="notices" id="notices" role="status" hidden></ul>
+    <div class="col col-main">
+
+      <section class="block" id="try" aria-labelledby="try-head">
+        <h2 id="try-head">Try a sentence</h2>
+        <p class="lede">Type something you might say. Hunch shows what it would do, and nothing in your home moves.</p>
+        <form class="try-form" id="try-form" autocomplete="off">
+          <label class="visually-hidden" for="try-text">Sentence to try</label>
+          <input class="field try-text" id="try-text" name="text" type="text" maxlength="300"
+                 placeholder="Type a command in your own words" enterkeyhint="go" spellcheck="false">
+          <button type="submit" class="button" id="try-go">Try</button>
+        </form>
+        <div class="try-examples" id="try-examples" hidden></div>
+        <div class="try-room" id="try-room-wrap" hidden>
+          <label for="try-room">As if said in</label>
+          <select class="select select-small" id="try-room"></select>
+        </div>
+        <div class="try-answer" id="try-answer" aria-live="polite" hidden></div>
+      </section>
+
+      <section class="block" id="happened" aria-labelledby="happened-head">
+        <h2 id="happened-head">What happened</h2>
+        <p class="lede">Newest first. If Hunch got one wrong, choose <span class="quote-ui">That was wrong</span>
+          under it to teach it the right answer.</p>
+        <p class="aside">Sentences that Home Assistant's own sentences answer first never reach Hunch, so they are
+          not listed here.</p>
+        <p class="aside" id="record-off-note" hidden>Keep a record is off, so no new sentences are kept, and those
+          kept before are hidden until you switch it back on. To delete them, choose Clear the record in
+          Settings.</p>
+        <ol class="turns" id="turns"></ol>
+        <p class="empty" id="turns-empty" hidden></p>
+        <button type="button" class="button-text" id="turns-more" hidden>Show older sentences</button>
+      </section>
+
+      <section class="block" id="taught" aria-labelledby="taught-head" hidden>
+        <h2 id="taught-head">What you have taught</h2>
+        <p class="lede">Hunch answers these sentences, and others worded like them, the way you showed it.</p>
+        <p class="aside taught-notice" id="taught-notice" role="status" hidden></p>
+        <ul class="taught" id="taught-list"></ul>
+      </section>
+    </div>
+
+    <div class="col col-side">
+      <section class="block" id="assistants-block" aria-labelledby="assistants-head">
+        <h2 id="assistants-head">Assistants</h2>
+        <p class="lede">Your voice assistants in Home Assistant, and which of them use Hunch.</p>
+        <ul class="assistants" id="assistants"></ul>
+        <p class="aside" id="assistants-uninstall" hidden></p>
+        <p class="empty" id="assistants-empty" hidden></p>
+      </section>
+
+      <section class="block" id="home" aria-labelledby="home-head">
+        <h2 id="home-head">Your home</h2>
+        <p class="home-sum" id="home-sum"></p>
+        <p class="home-rooms" id="home-rooms"></p>
+        <p class="aside">Hunch sees only the devices you expose to Assist in Home Assistant.</p>
+        <h3 class="sub" id="fix-head">Worth fixing</h3>
+        <ul class="fixes" id="fixes" aria-labelledby="fix-head"></ul>
+        <p class="empty" id="fixes-empty" hidden>Nothing to fix. Every device has a room, and a name of its own.</p>
+      </section>
+
+      <section class="block block-settings" id="settings" aria-labelledby="settings-head">
+        <h2 id="settings-head">Settings</h2>
+        <p class="lede">Each change is saved at once and used from the next sentence.</p>
+
+        <div class="setting">
+          <div class="setting-row">
+            <label class="setting-name" for="s-locks">Locks and doors</label>
+            <input class="switch" type="checkbox" role="switch" id="s-locks" data-setting="locks_and_doors">
+          </div>
+          <p class="setting-says" id="s-locks-says"></p>
+          <p class="setting-note" data-note="locks_and_doors" role="status"></p>
+        </div>
+
+        <div class="setting">
+          <div class="setting-row">
+            <label class="setting-name" for="s-pass">Pass on to</label>
+            <select class="select" id="s-pass" data-setting="pass_to"></select>
+          </div>
+          <p class="setting-says">What is not a home command, such as a question, goes to this agent, and its answer
+            comes back to you.</p>
+          <p class="setting-note" data-note="pass_to" role="status"></p>
+        </div>
+
+        <div class="setting">
+          <div class="setting-row">
+            <label class="setting-name" for="s-record">Keep a record</label>
+            <input class="switch" type="checkbox" role="switch" id="s-record" data-setting="keep_record">
+          </div>
+          <p class="setting-says">Keeps each sentence and outcome on this machine. Off: nothing new is kept,
+            and what was kept stays hidden until you choose Clear the record.</p>
+          <div class="clear" id="clear">
+            <button type="button" class="button-text" id="clear-ask">Clear the record</button>
+            <div class="clear-confirm" id="clear-confirm" hidden>
+              <p>Delete every sentence in the record? This cannot be undone.</p>
+              <div class="row-actions">
+                <button type="button" class="button button-quiet" id="clear-go">Delete the record</button>
+                <button type="button" class="button-text" id="clear-cancel">Keep it</button>
+              </div>
+            </div>
+          </div>
+          <p class="setting-note" data-note="keep_record" role="status"></p>
+        </div>
+
+        <div class="setting">
+          <div class="setting-row">
+            <label class="setting-name" for="s-share">Share daily counts</label>
+            <input class="switch" type="checkbox" role="switch" id="s-share" data-setting="share_counts">
+          </div>
+          <p class="setting-says">Once a day, sends counts only: how many sentences of each kind, and what Hunch
+            did with them. Never your words, device names or rooms. Turn it off and what this home sent is
+            deleted. <a id="privacy-link" href="https://github.com/yungbose/hunch-home/blob/main/PRIVACY.md"
+            target="_blank" rel="noopener noreferrer">Privacy notice</a></p>
+          <p class="setting-note" data-note="share_counts" role="status"></p>
+        </div>
+
+        <div class="setting setting-listen">
+          <details class="fold fold-setting" id="listen-fold">
+            <summary><span class="setting-name">Listen with no wake word <span class="fold-more">(experimental,
+              needs a USB microphone)</span></span><span class="fold-state" id="listen-sum-state"></span></summary>
+            <div class="fold-body">
+              <div class="setting-row">
+                <label class="setting-name" for="s-listen">Listening</label>
+                <input class="switch" type="checkbox" role="switch" id="s-listen" data-setting="listening">
+              </div>
+              <p class="setting-says">Hunch listens through a microphone plugged into this Home Assistant machine and
+                acts on the commands it hears, with nothing to say first. Three rules always hold:</p>
+              <ul class="rules">
+                <li>It never unlocks a lock, and never opens or closes anything but blinds and curtains.</li>
+                <li>It passes nothing on to another agent.</li>
+                <li>It keeps nothing it ignored.</li>
+              </ul>
+              <p class="mic" id="mic"></p>
+              <div class="clear-confirm" id="listen-fetch" hidden>
+                <p id="listen-fetch-says"></p>
+                <p class="listen-warn" id="listen-fetch-warn"></p>
+                <div class="row-actions">
+                  <button type="button" class="button" id="listen-fetch-go">Fetch it and switch on</button>
+                  <button type="button" class="button-text" id="listen-fetch-cancel">Not now</button>
+                </div>
+              </div>
+              <div class="listen-progress" id="listen-progress" hidden>
+                <progress id="listen-bar" max="1" value="0"></progress>
+                <p class="setting-note" id="listen-progress-says" role="status"></p>
+              </div>
+              <p class="listen-warn" id="listen-warn"></p>
+              <div class="setting-row setting-row-sub">
+                <label class="setting-name-sub" for="s-room">Microphone's room</label>
+                <select class="select" id="s-room" data-setting="mic_room"></select>
+              </div>
+              <p class="setting-says">A command that names no room, such as <q>lights off</q>, acts in this room.</p>
+              <p class="setting-note" data-note="listening" role="status"></p>
+              <p class="setting-note" data-note="mic_room" role="status"></p>
+            </div>
+          </details>
+        </div>
+      </section>
+
+    </div>
+
+    <section class="block block-data" id="data" aria-labelledby="data-head">
+      <details class="fold" id="data-fold">
+      <summary><h2 id="data-head">Your data<span class="fold-more">: what is kept, downloads, and what sharing would
+        send</span></h2></summary>
+      <div class="fold-body">
+
+      <div class="data-part" aria-labelledby="data-kept-head">
+        <h3 class="sub" id="data-kept-head">Where things are kept</h3>
+        <p class="data-says">On this machine, in the app's own folder: your settings, the record and what you have
+          taught Hunch. The record holds the latest 1,000 sentences, none older than 30 days. Home Assistant's
+          backups include all of it.</p>
+        <p class="data-says">Nothing of yours leaves this machine by Hunch's own doing, except the daily counts
+          when they are on.</p>
+        <p class="data-says" id="data-record-off" hidden>Keep a record is off, so no new sentences are kept.
+          Those already kept stay, hidden, until you clear them: still on this machine, in backups, in the
+          downloads and in that day's counts.</p>
+        <div class="clear" id="data-clear" hidden>
+          <button type="button" class="button-text" id="data-clear-ask">Clear the record</button>
+          <div class="clear-confirm" id="data-clear-confirm" hidden>
+            <p>Delete every sentence in the record? This cannot be undone.</p>
+            <div class="row-actions">
+              <button type="button" class="button button-quiet" id="data-clear-go">Delete the record</button>
+              <button type="button" class="button-text" id="data-clear-cancel">Keep it</button>
+            </div>
+          </div>
+        </div>
+        <p class="setting-note" id="data-clear-note" role="status"></p>
+      </div>
+
+      <div class="data-part" aria-labelledby="data-record-head">
+        <h3 class="sub" id="data-record-head">The record, to keep or to send</h3>
+        <div class="data-get">
+          <button type="button" class="button button-quiet" id="data-full">Download the record</button>
+          <p class="data-says">Every sentence and what became of it, names included. For you to keep.</p>
+        </div>
+        <div class="data-get">
+          <div class="row-actions">
+            <button type="button" class="button button-quiet" id="data-report">Download for a bug report</button>
+            <button type="button" class="button-text" id="data-report-copy">Copy the report</button>
+          </div>
+          <p class="data-says">The newest 50, with no sentences and no names of devices, rooms or agents. Made to
+            be pasted into a bug report.</p>
+        </div>
+        <pre class="data-report-text" id="data-report-text" tabindex="0" aria-label="The report" hidden></pre>
+        <p class="setting-note" id="data-get-note" role="status"></p>
+      </div>
+
+      <div class="data-part" aria-labelledby="data-counts-head">
+        <h3 class="sub" id="data-counts-head">The daily counts</h3>
+        <p class="data-says" id="data-share-says"></p>
+        <table class="data-table" id="data-counts" hidden>
+          <caption class="visually-hidden" id="data-counts-caption"></caption>
+          <tbody></tbody>
+        </table>
+        <details class="data-raw" id="data-raw" hidden>
+          <summary>The message itself</summary>
+          <pre id="data-message"></pre>
+          <p class="aside">Left out here: the private number your install reference is made from. The real
+            message carries it, and it is what deletes your counts.</p>
+        </details>
+        <p class="data-says" id="data-sent"></p>
+        <p class="data-says" id="data-deletion" role="status"></p>
+        <p class="aside" id="data-uninstall"></p>
+      </div>
+
+      <div class="data-part" aria-labelledby="data-ref-head">
+        <h3 class="sub" id="data-ref-head">Your install reference</h3>
+        <div class="data-ref-row">
+          <code class="data-ref" id="data-ref"></code>
+          <button type="button" class="button-text" id="data-ref-copy">Copy</button>
+        </div>
+        <p class="data-says">Quote it when you write to privacy@xevall.com about your counts. It is made from a
+          private number that stays on this machine.</p>
+        <div class="data-earlier" id="data-aside" hidden>
+          <p class="data-says">Hunch has found its record damaged before. Each time, it kept the file aside in the
+            app's folder and started a new install reference; counts sent before then belong to the reference
+            of that file. Quote these too when you write, newest first:</p>
+          <ul class="data-earlier-list" id="data-earlier"></ul>
+        </div>
+        <p class="setting-note" id="data-ref-note" role="status"></p>
+      </div>
+      </div>
+      </details>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p id="versions"></p>
+    <p><a href="fonts/NOTICE.md" target="_blank" rel="noopener">Fonts and their licences</a></p>
+  </footer>
+</div>
+
+<template id="turn-template">
+  <li class="turn">
+    <p class="turn-sentence"></p>
+    <time class="turn-time"></time>
+    <div class="turn-meta">
+      <span class="outcome"></span><span class="turn-what"></span>
+      <button type="button" class="button-text turn-wrong" aria-expanded="false">That was wrong</button>
+    </div>
+    <p class="turn-note" hidden></p>
+    <p class="turn-undone" hidden></p>
+    <p class="turn-taught" role="status" hidden></p>
+    <form class="correct" hidden>
+      <p class="correct-q">What should Hunch have understood?</p>
+      <div class="correct-fields">
+        <label><span>Do</span><select class="select correct-action" required></select></label>
+        <label><span>To</span><select class="select correct-kind" required></select></label>
+      </div>
+      <div class="row-actions">
+        <button type="submit" class="button">Teach Hunch</button>
+        <button type="button" class="button-text correct-decline" hidden>This was not a home command</button>
+        <button type="button" class="button-text correct-cancel">Cancel</button>
+      </div>
+      <p class="correct-help" hidden></p>
+      <p class="setting-note correct-note" role="status"></p>
+    </form>
+  </li>
+</template>
+</body>
+</html>

@@ -1,0 +1,91 @@
+# Hunch Home beside Home Assistant Container, with no Supervisor.
+#
+# 1. Make a long-lived access token in Home Assistant: your profile (bottom left), Security, Long-lived access
+#    tokens, Create token. Put it in a file named .env beside this file, readable by you only:
+#        echo "HASS_TOKEN=paste-the-token-here" > .env && chmod 600 .env
+#    (compose reads .env by itself; the token is never written into this file.)
+# 2. Add the `hunch` service below to your Home Assistant compose file, then: docker compose up -d
+#    (With no compose file yet, save this file as compose.yaml in an empty folder and run the same command. If
+#    Home Assistant is already running, from `docker run` or another folder, first delete the `homeassistant`
+#    service at the bottom: it would start a second Home Assistant with the same name, which Docker refuses.)
+# 3. In Home Assistant: Settings, Devices & services, Add integration, Wyoming Protocol, host 127.0.0.1 and
+#    port 10500. Then open the page at http://127.0.0.1:8099/ on this machine and press
+#    "Add Hunch to my assistant".
+#
+# You need Docker's Compose plug-in; to build the image yourself (see the Dockerfile), also its buildx plug-in.
+#
+# 127.0.0.1 below is right only when Home Assistant also runs on this machine's own network, as here
+# (network_mode: host). Otherwise set HUNCH_WYOMING_HOST to an address of this machine that Home Assistant can
+# reach, HUNCH_ALLOW_FROM to Home Assistant's address as the container sees it, and HASS_URL to Home Assistant's
+# address; then give the Wyoming integration this machine's address as its host.
+#
+# Both of Hunch's ports stay on this machine. It shares the host's network, as Home Assistant does here, and
+# listens only on 127.0.0.1: the Wyoming port (10500) has no sign-in and answers only this machine, and the page
+# (8099) has no sign-in of its own. Never publish either on your network. To open the page from another
+# computer, see the read-me (HUNCH_PAGE_HOST and HUNCH_PAGE_ALLOW_FROM).
+
+services:
+  hunch:
+    # The published image, or the tag you built yourself (see the Dockerfile).
+    image: ghcr.io/yungbose/hunch-home:0.2.0
+    container_name: hunch
+    restart: unless-stopped
+    network_mode: host
+    user: "10001:10001"   # the image's own ordinary user
+    environment:
+      HASS_URL: http://127.0.0.1:8123
+      HASS_TOKEN: ${HASS_TOKEN:?put HASS_TOKEN in a .env file beside this one}
+    volumes:
+      - hunch-data:/data   # settings, the record and what you taught it
+    # It writes only to /data, needs no privileges and holds about 600 MB once loaded.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g
+    # (Raspberry Pi OS starts with Docker's memory limits switched off, `cgroup_disable=memory`, and Docker then
+    # ignores mem_limit without saying so. The app runs the same; it is simply not capped.)
+    #
+    # Listening with no wake word (experimental, off until switched on on the page) needs a microphone, and
+    # about 0.9 GB more memory: raise mem_limit to 2g. Two ways; uncomment one, then `docker compose up -d` again.
+    # The page does not name the microphone in Docker.
+    #
+    # a) The sound device itself, read through ALSA by its card name (as the Raspberry Pi's own listener does;
+    #    `arecord -L` on the host lists the names: use the one after CARD= for your microphone). The app's user
+    #    needs the host's audio group: its number from `getent group audio`. Tried on a Raspberry Pi 5 (Debian 13)
+    #    with a USB microphone, exactly as below, with nothing else holding the microphone.
+    # devices:
+    #   - /dev/snd:/dev/snd
+    # group_add:
+    #   - "29"
+    # environment:   (add this line to the environment above, not a second block)
+    #   HUNCH_MIC: alsa:plughw:CARD=Device,DEV=0
+    #
+    # b) The host's PulseAudio or PipeWire sound server, through its socket (your desktop's default input is used;
+    #    1000 is your own user id on the host). NOT TESTED. The cookie is usually readable by you only, and the
+    #    app runs as user 10001.
+    # volumes:   (add these lines to the volumes above, not a second block; the cookie is PulseAudio's sign-in)
+    #   - /run/user/1000/pulse/native:/run/pulse/native
+    #   - ~/.config/pulse/cookie:/run/pulse/cookie:ro
+    # environment:   (add these lines to the environment above)
+    #   PULSE_SERVER: unix:/run/pulse/native
+    #   PULSE_COOKIE: /run/pulse/cookie
+
+  # Home Assistant Container as its own documentation sets it up. If you already run it, keep your own
+  # service and add only `hunch` above.
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+    volumes:
+      - ./config:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+
+volumes:
+  hunch-data:

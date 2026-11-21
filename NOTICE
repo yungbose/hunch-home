@@ -1,0 +1,30 @@
+Hunch Home, the Home Assistant app
+Copyright 2026 xevall (xevall.com)
+
+What is whose
+-------------
+
+This repository
+  The app's code (hunch_app/), its page (page/, apart from the fonts), the image recipe (Dockerfile), the
+  app's folder for Home Assistant (hunch_home/), the workflows and these notes are xevall's, under the Apache
+  License 2.0 (LICENSE).
+
+  The page's fonts (page/fonts/) are under the SIL Open Font License 1.1, each with its own copyright:
+  page/fonts/NOTICE.md.
+
+  The Python packages the image installs are listed, with their checksums, in requirements.lock; each keeps its
+  own licence.
+
+The model inside the image (not in this repository)
+  Hunch-1.1 Home, the typed build of xevall/hunch-1-home-ONNX at its released tag, is copied into the image at
+  build time with its own NOTICE and licence files, under /licenses in the image. The model files are under
+  Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0): free at home, for research and
+  for other non-commercial use, with credit. Commercial use needs xevall's permission: licensing@xevall.com.
+  Material from others inside the model keeps its own licence, as the model's NOTICE says.
+  https://huggingface.co/xevall/hunch-1-home
+
+Listening with no wake word (experimental)
+  The speech model it fetches on first use, Parakeet TDT 0.6B v2 by NVIDIA (CC BY 4.0), in the form the
+  sherpa-onnx project publishes, and the libraries it runs with (sherpa-onnx, Apache 2.0; pysilero-vad with
+  the Silero speech detector, MIT) are credited in hunch_app/listen/NOTICE, which the image carries as
+  /licenses/listening/NOTICE.

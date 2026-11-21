@@ -1,0 +1,164 @@
+name: Image
+
+# Builds the Hunch Home image for both processors (Raspberry Pi and PC), starts each one and asks it sentences,
+# and, when asked to, pushes it to ghcr.io under one name for both: the version's tag and `latest`.
+#
+# Started by hand. The model is not in this repository: each build is given the files of the public release
+# (xevall/hunch-1-home-ONNX at its released tag) as model.tar, attached to a draft release here, and checks the
+# archive against the SHA-256 given below. The build then checks every model file against the release's own
+# manifest (the Dockerfile's prepare stage).
+#
+# Before anything is pushed, each image is started as the Supervisor starts an app (as root, which it leaves for
+# its own ordinary user) and pointed, the way Docker users run it, at the stand-in Home Assistant that ships
+# inside the app for its demo. GitHub's machines cannot run Home Assistant OS, so this is the closest whole run
+# of the real model, the real rules and the real page that can happen here. .github/check_image.py says what is
+# checked.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Image version, which is also its tag; must be the version in hunch_home/config.yaml
+        required: true
+        default: "0.2.0"
+      model_release:
+        description: Draft release that holds model.tar
+        required: true
+        default: model-1.1
+      model_sha256:
+        description: SHA-256 of model.tar
+        required: true
+      push:
+        description: Push to ghcr.io when the checks pass
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: image-${{ inputs.version }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash  # with pipefail, so a failing command in a pipe fails the step
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/hunch-home
+  VERSION: ${{ inputs.version }}
+
+jobs:
+  build:
+    name: Build and try (${{ matrix.arch }})
+    permissions:
+      contents: write  # a draft release can only be read with write access
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            hass_arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            hass_arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    env:
+      ARCH: ${{ matrix.arch }}
+      HASS_ARCH: ${{ matrix.hass_arch }}
+      MODEL_RELEASE: ${{ inputs.model_release }}
+      MODEL_SHA256: ${{ inputs.model_sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: The version asked for is the app's
+        run: |
+          grep -qx "version: \"$VERSION\"" hunch_home/config.yaml
+          grep -qx "__version__ = \"$VERSION\"" hunch_app/__init__.py
+          grep -q "ghcr.io/yungbose/hunch-home:$VERSION" compose.example.yaml
+
+      - name: Fetch the model's files and check the archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/download" "$RUNNER_TEMP/model"
+          gh release download "$MODEL_RELEASE" --repo "$GITHUB_REPOSITORY" --pattern model.tar \
+            --dir "$RUNNER_TEMP/download"
+          echo "$MODEL_SHA256  $RUNNER_TEMP/download/model.tar" | sha256sum --check
+          tar -xf "$RUNNER_TEMP/download/model.tar" -C "$RUNNER_TEMP/model"
+
+      - name: Build
+        run: |
+          docker buildx build --platform "linux/$ARCH" --provenance=false --sbom=false \
+            --build-context model="$RUNNER_TEMP/model" \
+            --build-arg IMAGE_VERSION="$VERSION" \
+            --load -t "hunch-home:$VERSION" .
+          docker image inspect "hunch-home:$VERSION" \
+            --format '{{.Architecture}} {{index .Config.Labels "io.hass.arch"}} {{index .Config.Labels "io.hass.version"}}' \
+            | tee "$RUNNER_TEMP/labels"
+          test "$(cat "$RUNNER_TEMP/labels")" = "$ARCH $HASS_ARCH $VERSION"
+          docker image ls "hunch-home:$VERSION" --format 'size: {{.Size}}'
+
+      - name: Start it beside a stand-in Home Assistant and ask it sentences
+        run: |
+          token=$(docker run --rm --entrypoint python "hunch-home:$VERSION" -c \
+            'from hunch_app import standin; print(standin.TOKEN)')
+          docker run -d --name standin --network host --entrypoint python \
+            -v "$PWD/.github:/check:ro" "hunch-home:$VERSION" /check/check_image.py standin
+          # As the Supervisor starts an app: as root, with a data folder only root may write to. The app gives the
+          # folder to its own user and becomes that user before it opens a port.
+          docker run -d --name hunch --network host -v hunch-check-data:/data \
+            -e HASS_URL=http://127.0.0.1:8123 -e HASS_TOKEN="$token" \
+            --security-opt no-new-privileges:true "hunch-home:$VERSION"
+          status=0
+          docker run --rm --network host --entrypoint python -v "$PWD/.github:/check:ro" \
+            "hunch-home:$VERSION" /check/check_image.py ask "$VERSION" || status=$?
+          docker logs hunch > "$RUNNER_TEMP/hunch.log" 2>&1
+          cat "$RUNNER_TEMP/hunch.log"
+          test "$status" = 0
+          grep -q "running as user 10001, not root" "$RUNNER_TEMP/hunch.log"
+          # It never logs a sentence or a device's name.
+          if grep -i -q -e "reading light" -e "window lamp" -e "lock the door" -e "pop the" "$RUNNER_TEMP/hunch.log"; then
+            echo "the log holds a sentence or a device's name" >&2
+            exit 1
+          fi
+          # The image's own health check says healthy once it has run.
+          for attempt in $(seq 1 30); do
+            health=$(docker inspect --format '{{.State.Health.Status}}' hunch)
+            test "$health" = healthy && break
+            sleep 3
+          done
+          echo "health: $health"
+          test "$health" = healthy
+          docker stop hunch standin
+
+      - name: Push this processor's image
+        if: inputs.push
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker tag "hunch-home:$VERSION" "$IMAGE:$VERSION-$ARCH"
+          docker push "$IMAGE:$VERSION-$ARCH"
+
+  publish:
+    name: One name for both processors
+    if: inputs.push
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      packages: write
+    steps:
+      - name: Join the two images under the version's tag and latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker buildx imagetools create -t "$IMAGE:$VERSION" -t "$IMAGE:latest" \
+            "$IMAGE:$VERSION-amd64" "$IMAGE:$VERSION-arm64"
+          docker buildx imagetools inspect "$IMAGE:$VERSION"

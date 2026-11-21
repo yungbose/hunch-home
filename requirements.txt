@@ -1,0 +1,20 @@
+# What the Hunch Home app needs at run time: the typed build's runtime packages (no torch), Wyoming for the
+# conversation agent, aiohttp for Home Assistant's API and the page, and for listening with no wake word the
+# speech detector (Silero, through pysilero-vad) and the speech-to-text library (sherpa-onnx). Those two are only
+# imported when listening is switched on, by its own worker process; the speech model itself is not in the image
+# (it is fetched on first use, hunch_app/listen/speech.py). Their versions are the ones a Raspberry Pi and
+# the first microphone trial ran. The model's versions are the ones tried on a Raspberry Pi 5 for the two-piece
+# server (Debian 13, Python 3.13, 18 Nov 2026); wyoming and aiohttp are the ones the app's tests run with.
+#
+# The image installs from requirements.lock, which pins these and everything they pull in, each with its
+# checksums for every processor. After changing a line here, make the lock again, from this folder:
+#   uv pip compile requirements.txt --generate-hashes --universal --python-version 3.13 --no-header -o requirements.lock
+onnxruntime==1.32.0
+tokenizers==0.23.3
+numpy==2.5.5
+wyoming==1.11.0
+aiohttp==3.14.5
+sherpa-onnx==1.13.8
+# sherpa-onnx's Linux wheels need its core package; its macOS wheel does not, so the lock would miss it.
+sherpa-onnx-core==1.13.8
+pysilero-vad==3.4.1

@@ -1,0 +1,80 @@
+name: Check
+
+# On every push and pull request: Home Assistant's own check of the app's folder, the version numbers agree, and
+# the app's code starts. The model is not in this repository, so the code is started as its demo (`--demo`): the
+# real app, rules and page against the stand-in Home Assistant and a stand-in model, all on the runner. The image
+# itself is built and tried by the Image workflow, started by hand.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  app:
+    name: Home Assistant's check of the app's folder
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: frenck/action-addon-linter@v2
+        with:
+          path: ./hunch_home
+
+  versions:
+    name: The version numbers agree
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - run: |
+          version=$(sed -n 's/^version: "\(.*\)"$/\1/p' hunch_home/config.yaml)
+          echo "the app's version: $version"
+          grep -qx "__version__ = \"$version\"" hunch_app/__init__.py
+          grep -qx "ARG IMAGE_VERSION=$version" Dockerfile
+          grep -q "ghcr.io/yungbose/hunch-home:$version" compose.example.yaml
+          grep -q "ghcr.io/yungbose/hunch-home:$version" README.md
+          grep -q "default: \"$version\"" .github/workflows/image.yml
+          head -n 5 hunch_home/CHANGELOG.md | grep -q "^## $version"
+          grep -qx "image: ghcr.io/yungbose/hunch-home" hunch_home/config.yaml
+
+  demo:
+    name: The app starts (as its demo)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.13"
+      - name: Install the locked packages
+        run: pip install --require-hashes --only-binary=:all: -r requirements.lock
+      - name: Start the demo and open its page
+        run: |
+          python -m hunch_app --demo --trickle 0 > "$RUNNER_TEMP/demo.log" 2>&1 &
+          ready=""
+          for attempt in $(seq 1 30); do
+            if curl -fsS -m 2 http://127.0.0.1:8099/api/state > "$RUNNER_TEMP/state.json"; then
+              ready=yes
+              break
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/demo.log"
+          test -n "$ready"
+          python3 -c 'import json, sys; s = json.load(open(sys.argv[1])); print("version", s["version"]); assert s["connected"]' \
+            "$RUNNER_TEMP/state.json"
+          curl -fsS -m 2 http://127.0.0.1:8099/ | grep -q "Hunch Home"
