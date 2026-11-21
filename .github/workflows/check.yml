@@ -61,7 +61,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install the locked packages
-        run: pip install --require-hashes --only-binary=:all: -r requirements.lock
+        run: "pip install --require-hashes --only-binary=:all: -r requirements.lock"
       - name: Start the demo and open its page
         run: |
           python -m hunch_app --demo --trickle 0 > "$RUNNER_TEMP/demo.log" 2>&1 &

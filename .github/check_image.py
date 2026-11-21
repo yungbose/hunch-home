@@ -118,8 +118,12 @@ def newest_turn(sentence: str) -> dict:
 
 
 def ask(version: str) -> None:
+    status, state = 0, {}
     for _ in range(90):
-        status, state = page("api/state")
+        try:   # the port is closed until the app has loaded its model and dropped to its own user
+            status, state = page("api/state")
+        except OSError:
+            status, state = 0, {}
         if status == 200 and state.get("model_ready") and state.get("connected"):
             break
         time.sleep(2)
