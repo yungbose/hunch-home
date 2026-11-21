@@ -77,9 +77,9 @@ started reading") switched the lamp, in two voices; nothing else did. Commands f
 a command with a second voice talking over it did nothing. This is not a measurement, and no person spoke to it
 live.
 
-Not tried at the time of release: installing from this repository with the link in the read-me, which pulls the
-published image (until now the app was installed from a local copy and built on the machine), and the published
-image run in Docker beside Home Assistant Container.
+Installing from this repository was tried on 21 Nov 2026 in a Home Assistant OS test machine (64-bit Arm): Home
+Assistant pulled the published image in under two minutes, the app was ready 16 seconds after Start, and set-up
+and a first command worked. The published image run in Docker beside Home Assistant Container has not been tried.
 
 Not tried yet: a PC (amd64) at home, Home Assistant OS on a Raspberry Pi, a Home Assistant Green, real locks,
 covers and speakers, voice through a voice device, a person speaking to listening live, and timers. Nor has a

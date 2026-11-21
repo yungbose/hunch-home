@@ -4,7 +4,7 @@
 name: Hunch Home
 version: "0.2.0"
 slug: hunch_home
-description: Understands home commands in your own words, on this machine. Add it to your assistant with one button.
+description: Understands home commands in your own words, on this machine.
 url: https://github.com/yungbose/hunch-home
 arch:
   - aarch64
