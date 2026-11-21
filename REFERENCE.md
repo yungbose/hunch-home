@@ -86,10 +86,17 @@ beside Home Assistant Container, as [DOCKER.md](DOCKER.md) says: it was ready in
 commands switched a real lamp.
 
 Not tried yet: a PC (amd64) at home, Home Assistant OS on a Raspberry Pi, a Home Assistant Green, real locks,
-covers and speakers, voice through a voice device, a person speaking to listening live, and timers. Nor has a
-sentence passed on to a language model connected through Home Assistant (an OpenAI, Gemini, Anthropic or Ollama
-agent): only Home Assistant's own agent has been tried. It should work the same way, since the app hands the
-sentence to whichever agent you choose under **Pass on to**. The short lines Hunch gives when it does not carry
-out a home command have been tried against a stand-in Home Assistant only. Most of the app's behaviour has been checked against
+covers and speakers, voice through a voice device, a person speaking to listening live, and timers.
+
+A language model as the agent passed to was tried on 21 Nov 2026 in the test machine, with Home Assistant's
+Anthropic integration (Claude Haiku) given control of the home. Questions were passed to it and answered, with a
+follow-up question keeping its thread; home commands Hunch carried out, and those it answered with its one short
+line, never reached the model; and when the model could not be reached, Assist said so. One thing to know: a
+language model with control of your home acts on its own judgement. Asked "is the reading light on" in a
+conversation that had earlier held a request to turn it off, it switched the light off again. Hunch decides only
+what is passed on, not what your other agent then does. Other providers' agents (OpenAI, Gemini, Ollama) have not
+been tried; they are passed sentences the same way. The short lines Hunch gives when it does not carry out a home
+command have been seen in the test machine and on a Raspberry Pi 5.
+Most of the app's behaviour has been checked against
 Home Assistant's code and stand-in devices in automated tests, not on real devices. Try it on devices that do no
 harm first, and please report what breaks.
