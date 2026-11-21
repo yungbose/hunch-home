@@ -13,8 +13,6 @@ arch:
 image: ghcr.io/yungbose/hunch-home
 homeassistant: "2026.11.0"
 init: false
-startup: application
-boot: auto
 # Offers its Wyoming conversation agent to Home Assistant, which shows it under "Discovered".
 discovery:
   - wyoming
@@ -23,7 +21,6 @@ discovery:
 homeassistant_api: true
 # The owner's page, inside Home Assistant and behind its sign-in. Never published on the network.
 ingress: true
-ingress_port: 8099
 panel_icon: mdi:home-sound-in
 panel_title: Hunch Home
 # For listening with no wake word (experimental, off by default): the microphone chosen under Audio becomes the
@@ -39,9 +36,4 @@ backup_exclude:
   - "speech/*/*"
 # The Wyoming port (10500) is deliberately not listed under ports: it has no sign-in, so it is never published
 # on your network. Home Assistant reaches it on the Supervisor's internal network.
-# The Supervisor's watchdog (when the owner turns it on) asks the page, from the Supervisor's own address, which
-# the page answers as it answers Ingress. Not the Wyoming port: that answers only Home Assistant's address, so
-# the watchdog's connection would be refused and logged.
-watchdog: "http://[HOST]:[PORT:8099]/"
-options: {}
-schema: {}
+# The Supervisor's watchdog (when the owner turns it on) goes by the image's own health check.
