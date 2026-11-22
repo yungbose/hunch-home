@@ -7,6 +7,8 @@ cloud.
 
 Say "turn the lights on" and the lights come on, in tens of milliseconds, on a Raspberry Pi.
 
+[![Open your Home Assistant and add the Hunch Home repository](images/add-repository-button.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fyungbose%2Fhunch-home)
+
 <img src="images/live-view.png" width="1024" alt="The app's page after &quot;could you pop the reading light on&quot;: Turned on Reading light, Hunch did it in 44 ms">
 
 **Why**
@@ -17,6 +19,12 @@ Say "turn the lights on" and the lights come on, in tens of milliseconds, on a R
 
 Hunch does one job: work out what a home command means. It is small enough for the machine you already run Home
 Assistant on.
+
+<img src="images/siri-vs-hunch.gif" width="360" alt="Two table lamps, two screens: an Apple HomeView on the left and a Raspberry Pi screen on the right. After one spoken command the blue lamp on the right comes on and that screen shows turn on Lights, Lamp B is on; about 3.5 seconds later the orange lamp on the left comes on, and the HomeView shows Lamp A on.">
+
+"Hey Siri, switch the lamp on", heard by an Apple HomeView and by Hunch on a Raspberry Pi set-up of xevall's
+own, with no wake word (a demo, not the app's listening mode). Hunch's lamp, the blue one, comes on about 3.5
+seconds before Siri's.
 
 **What it does**
 
@@ -51,7 +59,9 @@ hears goes anywhere. Off unless you switch it on.
 
 ## Install
 
-1. [Add this repository to your Home Assistant](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fyungbose%2Fhunch-home) (or by hand: **Settings > Apps > Install app**, the three-dot menu, **Repositories**, **Add**, and paste `https://github.com/yungbose/hunch-home`).
+1. [![Open your Home Assistant and add the Hunch Home repository](images/add-repository-button.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fyungbose%2Fhunch-home)
+
+   [Add this repository to your Home Assistant](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fyungbose%2Fhunch-home) (or by hand: **Settings > Apps > Install app**, the three-dot menu, **Repositories**, **Add**, and paste `https://github.com/yungbose/hunch-home`).
 
    <img src="images/install-add-repository.png" width="440" alt="Home Assistant asks Add app repository? for https://github.com/yungbose/hunch-home, with Cancel and Add">
 
@@ -141,6 +151,10 @@ When Hunch gets a sentence wrong, press **That was wrong** under it on the page,
 understood, and press **Teach Hunch**. From then on it answers that sentence, and others worded like it, your way.
 What you taught stays on this machine and can be removed under **What you have taught**. Teaching never changes
 the rules: a taught sentence still cannot unlock a lock it does not name.
+
+<img src="images/teaching.gif" width="704" alt="Typed to Assist, the desk fan can have a rest gets the answer Turned on Desk fan. On the app's page, That was wrong under that sentence opens What should Hunch have understood; turn off and heating, fans or blinds are chosen and Teach Hunch pressed, and the page says Taught. Typed again, the same sentence gets Turned off Desk fan, and the dashboard shows the desk fan off.">
+
+"The desk fan can have a rest" turned the fan on. Taught once on the page, the same sentence turns it off.
 
 ## Locks and doors
 

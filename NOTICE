@@ -28,3 +28,7 @@ Listening with no wake word (experimental)
   sherpa-onnx project publishes, and the libraries it runs with (sherpa-onnx, Apache 2.0; pysilero-vad with
   the Silero speech detector, MIT) are credited in hunch_app/listen/NOTICE, which the image carries as
   /licenses/listening/NOTICE.
+
+The read-me's "Add app repository" button (images/add-repository-button.svg)
+  My Home Assistant's own badge, copied unchanged from home-assistant/my.home-assistant.io, under the Apache
+  License 2.0. The Home Assistant name and logo belong to their owner.
